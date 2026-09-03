@@ -200,7 +200,7 @@ export function DriversManagementContent() {
                       </td>
                       <td className="py-md px-md text-right">
                         <DataTableActionsMenu
-                          ariaLabel={`Actions pour ${row.full_name}`}
+                          ariaLabel={`Actions pour ${transportDriverName(row)}`}
                           items={crudRowActions({
                             edit: { resource: "drivers", recordId: row.id },
                             delete: {

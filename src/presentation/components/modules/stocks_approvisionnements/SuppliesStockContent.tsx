@@ -376,7 +376,7 @@ export function SuppliesStockContent() {
                               </button>
                             )}
 <DataTableActionsMenu
-                              ariaLabel={`Actions pour ${row.name}`}
+                              ariaLabel={`Actions pour ${row.designation}`}
                               items={crudRowActions({
                                 edit: { resource: "supplies", recordId: row.id },
                                 delete: {

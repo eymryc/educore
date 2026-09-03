@@ -248,7 +248,7 @@ export function StaffDirectoryContent() {
                           </td>
                           <td className="py-sm px-md text-right">
                             <DataTableActionsMenu
-                              ariaLabel={`Actions pour ${row.full_name}`}
+                              ariaLabel={`Actions pour ${staffMemberName(row)}`}
                               items={crudRowActions({
                                 edit: { resource: "staff-members", recordId: row.id },
                                 delete: {

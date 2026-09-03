@@ -360,7 +360,7 @@ export function ReportCardsManagementContent() {
                   </td>
                   <td className="py-sm px-md text-right">
                     <DataTableActionsMenu
-                      ariaLabel={`Actions pour ${studentFullName(card.student)}`}
+                      ariaLabel={`Actions pour ${studentFullName(card.student ?? { first_name: "", last_name: `#${card.student_id}` })}`}
                       items={[
                         ...(canGenerateReportCard(card.status) && canCreate
                           ? [
