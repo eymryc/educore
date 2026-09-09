@@ -1,3 +1,16 @@
+import type { AcademicYear } from "@/shared/types/academic.types";
+import type { PaginatedList } from "@/shared/types/api.types";
+import type { AssignmentSubmission } from "@/shared/types/assignments.types";
+import type { AttendanceRecord } from "@/shared/types/attendance.types";
+import type { CanteenAccount, CanteenSpecialDiet } from "@/shared/types/canteen.types";
+import type { Enrollment, ReEnrollment } from "@/shared/types/enrollment.types";
+import type { Invoice, Payment } from "@/shared/types/finance.types";
+import type { StudentGuardianLink } from "@/shared/types/guardian.types";
+import type { Grade } from "@/shared/types/grades.types";
+import type { LibraryLoan } from "@/shared/types/library.types";
+import type { ReportCard } from "@/shared/types/report-cards.types";
+import type { TransportSubscription } from "@/shared/types/transport.types";
+
 export type StudentStatus = "active" | "inactive" | "suspended";
 
 export interface AcademicRef {
@@ -45,6 +58,21 @@ export interface StudentDocumentMeta {
   mime_type: string;
   size: number;
   url: string;
+  created_at?: string | null;
+}
+
+export interface StudentPeriodAverage {
+  period: AcademicRef & { sort_order?: number | null };
+  average: number | null;
+}
+
+export interface StudentAverages {
+  academic_year: AcademicYear;
+  scale_max: number | string;
+  by_period: StudentPeriodAverage[];
+  annual_average: number | null;
+  mention: string | null;
+  mention_label: string | null;
 }
 
 export interface StudentFullDossier {
@@ -52,10 +80,14 @@ export interface StudentFullDossier {
   class: AcademicRef | null;
   level: AcademicRef | null;
   histories: StudentHistory[];
-  grades: unknown[];
-  attendance: unknown[];
-  report_cards: Array<{ id: number; status?: string; created_at?: string | null }>;
-  payments: unknown[];
+  grades: Grade[];
+  /** null tant qu'aucune année scolaire n'est active pour l'établissement. */
+  averages: StudentAverages | null;
+  attendance: AttendanceRecord[];
+  attendance_summary: Partial<Record<"PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED", number>>;
+  report_cards: ReportCard[];
+  invoices: Invoice[];
+  payments: Payment[];
   discipline: Array<{
     id: number;
     occurred_at?: string | null;
@@ -63,6 +95,15 @@ export interface StudentFullDossier {
     title?: string | null;
     status?: string | null;
   }>;
+  guardians: StudentGuardianLink[];
+  documents: StudentDocumentMeta[];
+  enrollments: Enrollment[];
+  re_enrollments: ReEnrollment[];
+  assignments: AssignmentSubmission[];
+  library_loans: LibraryLoan[];
+  canteen_account: CanteenAccount | null;
+  canteen_special_diets: CanteenSpecialDiet[];
+  transport_subscriptions: TransportSubscription[];
 }
 
 export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
@@ -70,6 +111,8 @@ export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   inactive: "Inactif",
   suspended: "Suspendu",
 };
+
+export type StudentListResult = PaginatedList<Student>;
 
 export function studentFullName(student: Pick<Student, "first_name" | "last_name">): string {
   return `${student.last_name} ${student.first_name}`.trim();

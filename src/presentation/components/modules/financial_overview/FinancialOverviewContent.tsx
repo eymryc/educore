@@ -21,6 +21,11 @@ import {
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
 import {
+  DataTableShell,
+  DataTableToolbar,
+} from "@/presentation/components/shared/DataTable";
+
+import {
   tableRowClass,
   useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
@@ -132,8 +137,8 @@ export function FinancialOverviewContent() {
       )}
 
       {!loading && overview && (
-        <div className="ui-table-shell" data-testid="finance-unpaid-list">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="finance-unpaid-list">
+          <DataTableToolbar>
             <h2 className="font-headline-md text-headline-md">Factures impayées</h2>
             <Link className="font-label-caps text-primary ml-sm" href="/invoices">
               Voir toutes
@@ -141,7 +146,7 @@ export function FinancialOverviewContent() {
             <div className="ml-auto shrink-0">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             </div>
-          </div>
+          </DataTableToolbar>
           {unpaid.length === 0 ? (
             <p className="p-lg font-body-md text-on-surface-variant">Aucune facture impayée.</p>
           ) : (
@@ -206,7 +211,7 @@ export function FinancialOverviewContent() {
               />
             </>
           )}
-        </div>
+        </DataTableShell>
       )}
     </div>
   );

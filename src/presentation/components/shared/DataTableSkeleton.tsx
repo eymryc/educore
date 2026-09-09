@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 type ColumnSpec = {
   width: string;
-  kind?: "checkbox" | "text" | "badge" | "actions";
+  kind?: "checkbox" | "text" | "badge" | "actions" | "avatar";
 };
 
 const DEFAULT_COLUMNS: ColumnSpec[] = [
@@ -115,6 +115,11 @@ export function DataTableSkeleton({
                   <td className="px-md py-sm align-middle" key={`c-${rowIndex}-${colIndex}`}>
                     {col.kind === "checkbox" ? (
                       <SkeletonBar className="w-4 h-4" round="rounded" />
+                    ) : col.kind === "avatar" ? (
+                      <div className="flex items-center gap-sm">
+                        <SkeletonBar className="w-7 h-7 shrink-0" round="rounded-md" />
+                        <SkeletonBar className={`${col.width} max-w-full`} />
+                      </div>
                     ) : col.kind === "badge" ? (
                       <SkeletonBar className={`${col.width} h-5`} round="rounded-full" />
                     ) : col.kind === "actions" ? (
@@ -372,7 +377,7 @@ export function PageTableSkeleton({
   return (
     <div className="flex flex-col w-full gap-lg pb-xl max-w-[1400px] mx-auto">
       <div className="ui-table-shell mt-0">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <div className="ui-table-chrome border-b-2 border-outline-variant/30">
           <SkeletonBar className="flex-1 min-w-[200px] h-10" round="rounded-lg" />
           <SkeletonBar className="w-36 h-10 shrink-0" round="rounded-lg" />
           <SkeletonBar className="w-36 h-10 shrink-0" round="rounded-lg" />
@@ -455,7 +460,7 @@ export function ContentSkeleton({
 
 export const STUDENTS_TABLE_SKELETON_COLUMNS: ColumnSpec[] = [
   { kind: "checkbox", width: "w-4" },
-  { kind: "text", width: "w-28" },
+  { kind: "avatar", width: "w-28" },
   { kind: "text", width: "w-24" },
   { kind: "text", width: "w-40" },
   { kind: "text", width: "w-24" },

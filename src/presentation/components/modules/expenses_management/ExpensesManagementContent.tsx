@@ -15,6 +15,14 @@ import {
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
 import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import {
   tableRowClass,
   useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
@@ -123,45 +131,32 @@ export function ExpensesManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="expenses-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher description, référence…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par catégorie"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setCategory(e.target.value)}
+      <DataTableShell testId="expenses-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={setSearch}
+            placeholder={"Rechercher description, référence…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par catégorie"
+            onChange={setCategory}
+            options={categories.map((c) => ({ value: c, label: c }))}
+            placeholder="Toutes les catégories"
             value={category}
-          >
-            <option value="">Toutes les catégories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="NOUVELLE DÉPENSE"
                 resource="expenses"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -248,7 +243,7 @@ export function ExpensesManagementContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

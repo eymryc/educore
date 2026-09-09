@@ -10,6 +10,13 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { DataTableSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+} from "@/presentation/components/shared/DataTable";
+
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -197,7 +204,7 @@ export function GradesEntryContent() {
       const existing = gradeByStudent.get(student.id);
       if (existing) {
         if (isGradeValidated(existing) && !can(user, "grades.validate")) {
-          setError("Note validée : permission grades.validate requise pour modifier.");
+          setError("Cette note est déjà validée : vous n'avez pas la permission de la modifier.");
           return;
         }
         const payload: Record<string, unknown> = {
@@ -301,54 +308,37 @@ export function GradesEntryContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="grades-table">
+      <DataTableShell testId="grades-table">
         {selectedAssessment && (
           <div className="px-lg pt-lg">
             <h2 className="font-title-sm">{selectedAssessment.title}</h2>
           </div>
         )}
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <select
-            aria-label="Classe"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => {
-              setClassId(e.target.value);
+        <DataTableToolbar>
+          <DataTableFilterSelect
+            ariaLabel="Classe"
+            onChange={(v) => {
+              setClassId(v);
               setAssessmentId("");
             }}
+            options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Toutes les classes"
             value={classId}
-          >
-            <option value="">Toutes les classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Évaluation"
-            className="ui-input cursor-pointer h-10 py-0 min-w-[200px]"
-            onChange={(e) => setAssessmentId(e.target.value)}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Évaluation"
+            className="sm:min-w-[200px]"
+            onChange={setAssessmentId}
+            options={classAssessments.map((a) => ({ value: String(a.id), label: a.title }))}
+            placeholder="Sélectionner une évaluation…"
             value={assessmentId}
-          >
-            <option value="">Sélectionner une évaluation…</option>
-            {classAssessments.map((a) => (
-              <option key={a.id} value={String(a.id)}>
-                {a.title}
-              </option>
-            ))}
-          </select>
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher un élève"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un élève…"
-              value={search}
-            />
-          </div>
+          />
+          <DataTableSearch
+            ariaLabel="Rechercher un élève"
+            onChange={setSearch}
+            placeholder="Rechercher un élève…"
+            value={search}
+          />
           {hasFilters && (
             <button
               className="inline-flex items-center gap-xs h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
@@ -359,7 +349,7 @@ export function GradesEntryContent() {
               Réinitialiser
             </button>
           )}
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton
               loading={loading}
               onRefresh={() => {
@@ -368,7 +358,7 @@ export function GradesEntryContent() {
             />
             {(canCreate || canUpdate) && assessmentId && (
               <button
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                className="inline-flex items-center gap-sm h-9 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm disabled:opacity-50"
                 disabled={busy}
                 onClick={() => void saveAll()}
                 type="button"
@@ -377,7 +367,7 @@ export function GradesEntryContent() {
               </button>
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -538,7 +528,7 @@ export function GradesEntryContent() {
             total={rows.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/infrastructure/auth/AuthProvider";
 import { ADMIN_NAV_SECTIONS, isAdminNavActive } from "@/shared/config/navigation";
 
@@ -18,6 +19,17 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const { logout } = useAuth();
+  const [desktop, setDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const compact = collapsed && desktop;
 
   return (
     <>
@@ -32,11 +44,11 @@ export function AdminSidebar({
         aria-label="Navigation principale"
         className={`fixed left-0 top-0 h-full max-w-[85vw] bg-primary text-on-primary z-50 flex flex-col overflow-hidden shadow-xl transform transition-[width,transform] duration-200 ease-out lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
-        } ${collapsed ? "w-16" : "w-56"}`}
+        } ${compact ? "w-16" : "w-56"}`}
       >
         <div
           className={`h-20 shrink-0 flex items-center bg-surface-container-lowest text-on-surface border-b border-outline-variant/20 ${
-            collapsed ? "px-sm justify-center gap-xs" : "px-lg gap-md"
+            compact ? "px-sm justify-center gap-xs" : "px-lg gap-md"
           }`}
         >
           <div className="w-8 h-8 rounded bg-primary-container flex items-center justify-center shrink-0">
@@ -44,7 +56,7 @@ export function AdminSidebar({
               school
             </span>
           </div>
-          {!collapsed && (
+          {!compact && (
             <span className="font-headline-md text-title-sm tracking-tight truncate text-on-surface">
               EduCore
             </span>
@@ -75,12 +87,12 @@ export function AdminSidebar({
 
         <nav
           className={`flex-1 min-h-0 overflow-y-auto py-md space-y-xs ${
-            collapsed ? "px-xs" : "px-sm"
+            compact ? "px-xs" : "px-sm"
           }`}
         >
           {ADMIN_NAV_SECTIONS.map((section) => (
             <div key={section.title}>
-              {!collapsed ? (
+              {!compact ? (
                 <div className="px-md py-xs text-label-caps text-on-primary/40 uppercase">
                   {section.title}
                 </div>
@@ -93,20 +105,20 @@ export function AdminSidebar({
                   <Link
                     key={item.id}
                     aria-current={active ? "page" : undefined}
-                    aria-label={collapsed ? item.label : undefined}
+                    aria-label={compact ? item.label : undefined}
                     className={
                       active
                         ? `relative flex items-center py-sm transition-all bg-primary-container text-on-primary-container font-semibold rounded-lg ${
-                            collapsed ? "justify-center px-sm" : "px-md"
+                            compact ? "justify-center px-sm" : "px-md"
                           }`
                         : `flex items-center py-sm rounded-lg text-body-sm text-on-primary/70 hover:bg-primary-container hover:text-on-primary-container transition-all ${
-                            collapsed ? "justify-center px-sm" : "px-md"
+                            compact ? "justify-center px-sm" : "px-md"
                           }`
                     }
                     data-active={active ? "true" : undefined}
                     href={item.href}
                     onClick={onClose}
-                    title={collapsed ? item.label : undefined}
+                    title={compact ? item.label : undefined}
                   >
                     {active && (
                       <span
@@ -116,12 +128,12 @@ export function AdminSidebar({
                     )}
                     <span
                       className={`material-symbols-outlined text-[20px] ${
-                        collapsed ? "" : "mr-sm"
+                        compact ? "" : "mr-sm"
                       }`}
                     >
                       {item.icon}
                     </span>
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!compact && <span className="truncate">{item.label}</span>}
                   </Link>
                 );
               })}
@@ -131,11 +143,11 @@ export function AdminSidebar({
 
         <footer
           className={`shrink-0 bg-surface-container-lowest text-on-surface border-t border-outline-variant/20 ${
-            collapsed ? "px-xs py-sm" : "px-sm py-sm"
+            compact ? "px-xs py-sm" : "px-sm py-sm"
           }`}
           data-testid="sidebar-footer"
         >
-          {!collapsed ? (
+          {!compact ? (
             <div className="grid grid-cols-2 gap-xs">
               <Link
                 className="inline-flex items-center justify-center gap-xs h-9 rounded-lg text-[12px] font-medium text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"

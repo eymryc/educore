@@ -1,4 +1,5 @@
 import type { AcademicYear, NamedRef } from "@/shared/types/academic.types";
+import type { PaginatedList } from "@/shared/types/api.types";
 import type { Student } from "@/shared/types/student.types";
 import { studentFullName } from "@/shared/types/student.types";
 
@@ -17,6 +18,8 @@ export type InvoiceStatus =
   | "PAID"
   | "OVERDUE"
   | "CANCELLED";
+
+export type PaymentMethod = "CASH" | "MOBILE_MONEY" | "CHEQUE" | "BANK_TRANSFER" | "PAYSTACK";
 
 export interface FinanceOverview {
   total_invoiced: number | string;
@@ -43,6 +46,8 @@ export interface Invoice {
   institution_id: number;
   student_id: number;
   academic_year_id: number;
+  /** Renseigné pour une échéance de scolarité trimestrielle ; null pour une facture annuelle (inscription, assurance...). */
+  academic_period_id?: number | null;
   invoice_number: string | null;
   issue_date: string;
   due_date: string;
@@ -57,6 +62,7 @@ export interface Invoice {
   created_by: number | null;
   student?: Student | null;
   academic_year?: AcademicYear | NamedRef | null;
+  academic_period?: NamedRef | null;
   items?: InvoiceItem[];
   created_at?: string | null;
   updated_at?: string | null;
@@ -73,6 +79,8 @@ export interface Payment {
   provider: string | null;
   provider_reference: string | null;
   provider_transaction_id: string | null;
+  receipt_number: string | null;
+  method: PaymentMethod | null;
   authorization_url?: string | null;
   refund_amount: number | string | null;
   paid_at: string | null;
@@ -84,6 +92,9 @@ export interface Payment {
   created_at?: string | null;
   updated_at?: string | null;
 }
+
+export type InvoiceListResult = PaginatedList<Invoice>;
+export type PaymentListResult = PaginatedList<Payment>;
 
 export interface Expense {
   id: number;
@@ -190,6 +201,14 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   FAILED: "Échoué",
   CANCELLED: "Annulé",
   REFUNDED: "Remboursé",
+};
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "Espèces",
+  MOBILE_MONEY: "Mobile Money",
+  CHEQUE: "Chèque",
+  BANK_TRANSFER: "Virement bancaire",
+  PAYSTACK: "Paiement en ligne",
 };
 
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {

@@ -80,6 +80,11 @@ const student = {
 vi.mock("@/presentation/components/providers/ConfirmDialogProvider", () => ({
   useConfirm: () => vi.fn().mockResolvedValue(true),
 }));
+
+function paginated<T>(data: T[]) {
+  return { data, meta: { current_page: 1, per_page: 1000, total: data.length, last_page: 1 } };
+}
+
 describe("ReportCardsManagementContent", () => {
   beforeEach(() => {
     listReportCards.mockReset();
@@ -121,7 +126,7 @@ describe("ReportCardsManagementContent", () => {
       },
     ]);
     listStudents.mockResolvedValue([student]);
-    listReportCards.mockResolvedValue([]);
+    listReportCards.mockResolvedValue(paginated([]));
   });
 
   it("shows loading then empty state", async () => {
@@ -157,7 +162,7 @@ describe("ReportCardsManagementContent", () => {
       },
       bulletin: null,
     };
-    listReportCards.mockResolvedValue([draft]);
+    listReportCards.mockResolvedValue(paginated([draft]));
     generateReportCard.mockResolvedValue({
       ...draft,
       status: "generated",
@@ -173,8 +178,7 @@ describe("ReportCardsManagementContent", () => {
     });
 
     render(<ReportCardsManagementContent />);
-    await waitFor(() => expect(screen.getByTestId("report-cards-table")).toBeInTheDocument());
-    expect(screen.getByText("Koné Awa")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Koné Awa")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /Actions pour Koné Awa/i }));
     await user.click(screen.getByRole("menuitem", { name: "Générer" }));
@@ -187,37 +191,39 @@ describe("ReportCardsManagementContent", () => {
 
   it("downloads PDF when available", async () => {
     const user = userEvent.setup();
-    listReportCards.mockResolvedValue([
-      {
-        id: 11,
-        institution_id: 1,
-        student_id: 7,
-        academic_period_id: 1,
-        appreciation: null,
-        status: "generated",
-        generated_at: "2026-09-02T10:00:00Z",
-        published_at: null,
-        published_by: null,
-        created_by: 1,
-        student,
-        academic_period: {
-          id: 1,
+    listReportCards.mockResolvedValue(
+      paginated([
+        {
+          id: 11,
           institution_id: 1,
-          academic_year_id: 1,
-          name: "Trimestre 1",
-          type: null,
-          start_date: null,
-          end_date: null,
-          sort_order: 1,
-          status: "open",
+          student_id: 7,
+          academic_period_id: 1,
+          appreciation: null,
+          status: "generated",
+          generated_at: "2026-09-02T10:00:00Z",
+          published_at: null,
+          published_by: null,
+          created_by: 1,
+          student,
+          academic_period: {
+            id: 1,
+            institution_id: 1,
+            academic_year_id: 1,
+            name: "Trimestre 1",
+            type: null,
+            start_date: null,
+            end_date: null,
+            sort_order: 1,
+            status: "open",
+          },
+          bulletin: { id: 1, file_name: "bulletin.pdf", url: "/media/1" },
         },
-        bulletin: { id: 1, file_name: "bulletin.pdf", url: "/media/1" },
-      },
-    ]);
+      ])
+    );
     downloadReportCardPdf.mockResolvedValue(undefined);
 
     render(<ReportCardsManagementContent />);
-    await waitFor(() => expect(screen.getByTestId("report-cards-table")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Koné Awa")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: /Actions pour Koné Awa/i }));
     await user.click(screen.getByRole("menuitem", { name: "PDF" }));
     await waitFor(() => expect(downloadReportCardPdf).toHaveBeenCalledWith(11));

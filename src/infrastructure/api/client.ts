@@ -3,6 +3,7 @@ import { clearToken, getToken } from "@/infrastructure/auth/token-storage";
 import {
   ApiError,
   type ApiEnvelope,
+  type ApiFailure,
   type PaginationMeta,
 } from "@/shared/types/api.types";
 
@@ -96,9 +97,10 @@ async function parseEnvelope<T>(
 
   if (raw) {
     if (!response.ok) {
-      const message = "Échec du téléchargement.";
+      const errorPayload = (await response.json().catch(() => null)) as ApiFailure | null;
+      const message = errorPayload?.message || "Échec du téléchargement.";
       toast.error(message);
-      throw new ApiError(message, response.status);
+      throw new ApiError(message, response.status, errorPayload?.errors ?? {});
     }
     return { data: response as unknown as T };
   }

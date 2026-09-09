@@ -14,6 +14,13 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -125,7 +132,9 @@ export function PersonnelEvaluationsContent() {
 
   if (!canView) {
     return (
-      <p className="p-xl font-body-md text-on-surface-variant">Accès réservé (`hr.view`).</p>
+      <p className="p-xl font-body-md text-on-surface-variant">
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
+      </p>
     );
   }
 
@@ -145,32 +154,29 @@ export function PersonnelEvaluationsContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="evaluations-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <select
-            aria-label="Filtrer statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+      <DataTableShell testId="evaluations-table">
+        <DataTableToolbar>
+          <DataTableFilterSelect
+            ariaLabel="Filtrer statut"
+            onChange={setStatus}
+            options={Object.entries(STAFF_EVALUATION_STATUS_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {Object.entries(STAFF_EVALUATION_STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="NOUVELLE ÉVALUATION"
                 resource="staff-evaluations"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -276,7 +282,7 @@ export function PersonnelEvaluationsContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

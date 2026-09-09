@@ -1,12 +1,31 @@
 import { api, apiRequest } from "@/infrastructure/api/client";
+import { emptyPaginationMeta } from "@/shared/types/api.types";
 import type {
   Student,
   StudentDocumentMeta,
   StudentFullDossier,
+  StudentListResult,
 } from "@/shared/types/student.types";
+
+export type StudentListQuery = {
+  search?: string;
+  status?: string;
+  level_id?: number | string;
+  class_group_id?: number | string;
+  page?: number | string;
+  per_page?: number | string;
+};
 
 export function listStudents(): Promise<Student[]> {
   return api.get<Student[]>("/students");
+}
+
+export async function listStudentsPage(query: StudentListQuery): Promise<StudentListResult> {
+  const result = await api.getWithMeta<Student[]>("/students", query);
+  return {
+    data: result.data ?? [],
+    meta: result.meta ?? emptyPaginationMeta(),
+  };
 }
 
 export function getStudent(id: number | string): Promise<Student> {

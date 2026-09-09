@@ -18,6 +18,8 @@ function enrollment(
     class_group_id: null,
     first_name: "Awa",
     last_name: "Koné",
+    origin: "NOUVELLE_INSCRIPTION",
+    previous_school: null,
     birth_date: null,
     gender: "F",
     parent_contact: "0700000000",

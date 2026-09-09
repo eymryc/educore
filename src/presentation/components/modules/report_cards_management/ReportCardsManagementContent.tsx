@@ -14,6 +14,11 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { DataTableSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+} from "@/presentation/components/shared/DataTable";
+
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -46,12 +51,13 @@ import {
   canGenerateReportCard,
   canPublishReportCard,
   filterReportCards,
-  summarizeReportCards,
   type ReportCard,
   type ReportCardStatus,
 } from "@/shared/types/report-cards.types";
 import { studentFullName, type Student } from "@/shared/types/student.types";
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
+
+const REPORT_CARDS_FETCH_LIMIT = 1000;
 
 function statusTone(status: ReportCardStatus): "neutral" | "info" | "success" | "warning" {
   if (status === "published") return "success";
@@ -111,27 +117,32 @@ export function ReportCardsManagementContent() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadCards() {
-      setLoading(true);
-      setError(null);
-      try {
-        const list = await listReportCards({
-          ...(classId ? { class_group_id: classId } : {}),
-          ...(periodId ? { academic_period_id: periodId } : {}),
-        });
-        if (!cancelled) setCards(list);
-      } catch (err) {
-        if (!cancelled) setError(getAuthErrorMessage(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  async function loadCards(classGroupId = classId, academicPeriodId = periodId) {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await listReportCards({
+        ...(classGroupId ? { class_group_id: classGroupId } : {}),
+        ...(academicPeriodId ? { academic_period_id: academicPeriodId } : {}),
+        // Un bulletin par élève par période : filtrer par classe/période
+        // borne déjà le résultat à une taille humaine (un effectif de
+        // classe), donc un per_page généreux couvre le cas réel sans
+        // re-paginer l'UI — les actions groupées (créer les manquants,
+        // générer/publier tout) ont besoin de l'ensemble correspondant aux
+        // filtres, pas d'une page arbitraire.
+        per_page: REPORT_CARDS_FETCH_LIMIT,
+      });
+      setCards(result.data);
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
-    void loadCards();
-    return () => {
-      cancelled = true;
-    };
+  }
+
+  useEffect(() => {
+    void loadCards(classId, periodId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- classId/periodId drive the API filters
   }, [classId, periodId]);
 
   const filtered = useMemo(
@@ -140,8 +151,6 @@ export function ReportCardsManagementContent() {
   );
 
   const reportCardsTable = useClientDataTable(filtered, [search, status, classId, periodId]);
-
-  const summary = useMemo(() => summarizeReportCards(filtered), [filtered]);
 
   function patchCard(updated: ReportCard) {
     setCards((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -293,20 +302,15 @@ export function ReportCardsManagementContent() {
 
   return (
     <div className="flex flex-col w-full gap-lg pb-xl max-w-7xl mx-auto">
-<div className="ui-table-shell" data-testid="report-cards-table">
-        <div className="px-lg pt-lg pb-md flex justify-end border-b border-outline-variant/15">
+<DataTableShell testId="report-cards-table">
+        <DataTableToolbar className="justify-end">
           <DataTableRefreshButton
             loading={loading}
             onRefresh={() => {
-              if (periodId) {
-                void listReportCards({
-                  class_group_id: classId || undefined,
-                  academic_period_id: periodId,
-                }).then(setCards);
-              }
+              if (periodId) void loadCards();
             }}
           />
-        </div>
+        </DataTableToolbar>
         <div className="overflow-x-auto min-h-[320px]">
         {loading ? (
           <DataTableSkeleton label="Chargement des bulletins…" testId="report-cards-loading" />
@@ -439,7 +443,7 @@ export function ReportCardsManagementContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

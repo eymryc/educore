@@ -1,12 +1,29 @@
 import { api } from "@/infrastructure/api/client";
+import { emptyPaginationMeta } from "@/shared/types/api.types";
 import type {
   Enrollment,
   EnrollmentDocument,
+  EnrollmentListMeta,
+  EnrollmentListResult,
   ReEnrollment,
 } from "@/shared/types/enrollment.types";
 
-export function listEnrollments(): Promise<Enrollment[]> {
-  return api.get<Enrollment[]>("/enrollments");
+export type EnrollmentListQuery = {
+  academic_year_id?: number | string;
+  level_id?: number | string;
+  status?: string;
+  search?: string;
+  page?: number | string;
+  per_page?: number | string;
+};
+
+export async function listEnrollments(query?: EnrollmentListQuery): Promise<EnrollmentListResult> {
+  const result = await api.getWithMeta<Enrollment[]>("/enrollments", query);
+  const meta = (result.meta ?? emptyPaginationMeta()) as EnrollmentListMeta;
+  return {
+    data: result.data ?? [],
+    meta,
+  };
 }
 
 export function getEnrollment(id: number | string): Promise<Enrollment> {

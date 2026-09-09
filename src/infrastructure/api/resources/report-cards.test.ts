@@ -5,6 +5,7 @@ const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiDelete = vi.fn();
 const apiRequest = vi.fn();
+const apiGetWithMeta = vi.fn();
 
 vi.mock("@/infrastructure/api/client", () => ({
   api: {
@@ -12,6 +13,7 @@ vi.mock("@/infrastructure/api/client", () => ({
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     delete: (...args: unknown[]) => apiDelete(...args),
+    getWithMeta: (...args: unknown[]) => apiGetWithMeta(...args),
   },
   apiRequest: (...args: unknown[]) => apiRequest(...args),
 }));
@@ -31,14 +33,18 @@ describe("report-cards API resource", () => {
     apiPut.mockReset();
     apiDelete.mockReset();
     apiRequest.mockReset();
+    apiGetWithMeta.mockReset();
   });
 
   it("lists, creates, generates and publishes", async () => {
-    apiGet.mockResolvedValue([]);
+    apiGetWithMeta.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, per_page: 25, total: 0, last_page: 1 },
+    });
     apiPost.mockResolvedValue({ id: 1, status: "draft" });
 
     await listReportCards({ class_group_id: 2, academic_period_id: 1 });
-    expect(apiGet).toHaveBeenCalledWith("/report-cards", {
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/report-cards", {
       class_group_id: 2,
       academic_period_id: 1,
     });

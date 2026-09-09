@@ -1,4 +1,5 @@
 import type { AcademicYear, ClassGroup, NamedRef } from "@/shared/types/academic.types";
+import type { PaginationMeta } from "@/shared/types/api.types";
 import type { Student } from "@/shared/types/student.types";
 
 export type EnrollmentStatus =
@@ -9,6 +10,77 @@ export type EnrollmentStatus =
   | "ENROLLED"
   | "CLASS_ASSIGNED"
   | "REJECTED";
+
+export type EnrollmentOrigin =
+  | "NOUVELLE_INSCRIPTION"
+  | "AFFECTATION_CEPE"
+  | "AFFECTATION_BEPC"
+  | "TRANSFERT";
+
+export const ENROLLMENT_ORIGIN_LABELS: Record<EnrollmentOrigin, string> = {
+  NOUVELLE_INSCRIPTION: "Nouvelle inscription",
+  AFFECTATION_CEPE: "Affectation 6ème (CEPE)",
+  AFFECTATION_BEPC: "Orientation 2nde (BEPC)",
+  TRANSFERT: "Transfert (DELC)",
+};
+
+export type YearEndDecision = "A" | "R" | "E";
+
+export const YEAR_END_DECISION_LABELS: Record<YearEndDecision, string> = {
+  A: "Admis(e)",
+  R: "Redouble",
+  E: "Exclu(e)",
+};
+
+export type EnrollmentDocumentKind =
+  | "birth_certificate"
+  | "photos"
+  | "report_card"
+  | "assignment_sheet"
+  | "orientation_sheet"
+  | "transfer_document"
+  | "mena_receipt"
+  | "cmu"
+  | "vaccination"
+  | "parent_id"
+  | "school_certificate"
+  | "clearance";
+
+export const ENROLLMENT_DOCUMENT_LABELS: Record<EnrollmentDocumentKind, string> = {
+  birth_certificate: "Extrait d'acte de naissance",
+  photos: "Photos d'identité",
+  report_card: "Bulletin T3 / décision de fin d'année",
+  assignment_sheet: "Fiche d'affectation (6ème)",
+  orientation_sheet: "Fiche d'orientation (2nde)",
+  transfer_document: "Document de transfert (DELC / DEEP)",
+  mena_receipt: "Reçu d'inscription en ligne MENA / DESPS",
+  cmu: "Carte CMU ou récépissé d'enrôlement",
+  vaccination: "Certificat de vaccination",
+  parent_id: "Pièce d'identité du parent / tuteur",
+  school_certificate: "Certificat de scolarité",
+  clearance: "Quitus de non-redevance",
+};
+
+export function suggestedEnrollmentDocuments(
+  origin: EnrollmentOrigin | string
+): EnrollmentDocumentKind[] {
+  const base: EnrollmentDocumentKind[] = [
+    "birth_certificate",
+    "photos",
+    "parent_id",
+    "mena_receipt",
+  ];
+  if (origin === "AFFECTATION_CEPE") {
+    return [...base, "assignment_sheet", "report_card", "vaccination"];
+  }
+  if (origin === "AFFECTATION_BEPC") {
+    return [...base, "orientation_sheet", "report_card"];
+  }
+  if (origin === "TRANSFERT") {
+    return [...base, "transfer_document", "school_certificate", "clearance", "report_card"];
+  }
+  return [...base, "vaccination", "report_card"];
+}
 
 export interface EnrollmentDocument {
   id: number;
@@ -28,12 +100,23 @@ export interface Enrollment {
   class_group_id: number | null;
   first_name: string;
   last_name: string;
+  origin: EnrollmentOrigin;
+  previous_school: string | null;
+  national_matricule?: string | null;
   birth_date: string | null;
+  birth_place?: string | null;
+  nationality?: string | null;
+  previous_level?: string | null;
+  year_end_decision?: YearEndDecision | string | null;
+  mena_receipt_number?: string | null;
+  mena_paid_at?: string | null;
   gender: "M" | "F" | null;
   parent_contact: string;
+  parent_full_name?: string | null;
   application_date: string;
   status: EnrollmentStatus;
   observations: string | null;
+  provided_documents?: EnrollmentDocumentKind[] | string[];
   reviewed_at: string | null;
   approved_at: string | null;
   payment_at: string | null;
@@ -49,10 +132,19 @@ export interface Enrollment {
   updated_at?: string | null;
 }
 
+export interface EnrollmentListMeta extends PaginationMeta {
+  status_counts?: Partial<Record<EnrollmentStatus, number>>;
+}
+
+export interface EnrollmentListResult {
+  data: Enrollment[];
+  meta: EnrollmentListMeta;
+}
+
 export const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
-  APPLICATION: "Candidature",
-  REVIEW: "Examen",
-  APPROVED: "Approuvée",
+  APPLICATION: "Dossier déposé",
+  REVIEW: "Examen des pièces",
+  APPROVED: "Validé",
   PAYMENT: "Paiement",
   ENROLLED: "Inscrit",
   CLASS_ASSIGNED: "Classe affectée",
@@ -91,7 +183,10 @@ export interface ReEnrollment {
   previous_class_group_id: number | null;
   new_class_group_id: number | null;
   status: ReEnrollmentStatus;
+  year_end_decision?: YearEndDecision | string | null;
   notes: string | null;
+  /** Déduit côté API de la comparaison des niveaux — pas une case à cocher. */
+  is_repeat: boolean;
   completed_at: string | null;
   student?: Student | null;
   academic_year?: AcademicYear | NamedRef | null;

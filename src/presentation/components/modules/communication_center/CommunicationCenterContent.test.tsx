@@ -153,13 +153,9 @@ describe("CommunicationCenterContent", () => {
 
     render(<CommunicationCenterContent />);
     await waitFor(() => {
-      expect(screen.getByTestId("announcements-table")).toBeInTheDocument();
-    });
-
-    await userEvent.click(screen.getByRole("tab", { name: /messages/i }));
-    await waitFor(() => {
       expect(screen.getByTestId("conversations-list")).toHaveTextContent("Mme Diallo");
     });
+
 
     await userEvent.click(screen.getByRole("button", { name: /mme diallo/i }));
     await waitFor(() => {

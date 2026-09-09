@@ -9,8 +9,7 @@ import {
 describe("resolveActiveAdminHref / isAdminNavActive", () => {
   it("matches exact list routes including nested paths", () => {
     expect(resolveActiveAdminHref("/finance/fees")).toBe("/finance/fees");
-    expect(resolveActiveAdminHref("/academic/structure")).toBe("/academic/structure");
-    expect(resolveActiveAdminHref("/security/audit-logs")).toBe("/security/audit-logs");
+    expect(resolveActiveAdminHref("/settings")).toBe("/settings");
     expect(isAdminNavActive("/hr/staff", "/hr/staff")).toBe(true);
     expect(isAdminNavActive("/hr/staff", "/hr/payroll")).toBe(false);
   });
@@ -28,6 +27,8 @@ describe("resolveActiveAdminHref / isAdminNavActive", () => {
     expect(resolveActiveAdminHref("/crud/teachers/4/modifier")).toBe("/teachers");
     expect(resolveActiveAdminHref("/crud/fee-items/nouveau")).toBe("/finance/fees");
     expect(resolveActiveAdminHref("/crud/drivers/2/modifier")).toBe("/transport/drivers");
+    expect(resolveActiveAdminHref("/crud/academic-years/nouveau")).toBe("/settings");
+    expect(resolveActiveAdminHref("/crud/levels/3/modifier")).toBe("/settings");
   });
 
   it("only marks dashboard on the exact path", () => {

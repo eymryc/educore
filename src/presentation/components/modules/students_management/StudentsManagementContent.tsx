@@ -4,26 +4,24 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  type PaginationState,
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import { listClassGroups, listLevels, listAcademicYears } from "@/infrastructure/api/resources/academic";
-import { deleteStudent, listStudents } from "@/infrastructure/api/resources/students";
+import { deleteStudent, listStudentsPage } from "@/infrastructure/api/resources/students";
 import { useAuth, getAuthErrorMessage } from "@/infrastructure/auth/AuthProvider";
 import { can } from "@/shared/lib/permissions";
 import type { ClassGroup } from "@/shared/types/academic.types";
 import type { AcademicRef, Student } from "@/shared/types/student.types";
 import {
   STUDENT_STATUS_LABELS,
-  filterStudents,
   studentFullName,
   type StudentStatus,
 } from "@/shared/types/student.types";
@@ -37,13 +35,66 @@ import {
   crudRowActions,
   DataTableActionsMenu,
 } from "@/presentation/components/shared/DataTableActionsMenu";
+import { DataTableRefreshButton } from "@/presentation/components/shared/DataTableControls";
+import { tableRowClass, DEFAULT_TABLE_PAGE_SIZE } from "@/presentation/components/shared/data-table-utils";
+import {
+  DATA_TABLE_CREATE_CLASS,
+  DataTableClearFilters,
+  DataTableEmpty,
+  DataTableFilterSelect,
+  DataTableSearch,
+  DataTableSelectionBar,
+  DataTableShell,
+  DataTableToolbar,
+  DataTableToolbarActions,
+} from "@/presentation/components/shared/DataTable";
+import { emptyPaginationMeta, type PaginationMeta } from "@/shared/types/api.types";
 
-const DEFAULT_PAGE_SIZE = 10;
+const AVATAR_PALETTES = [
+  "bg-primary-fixed text-on-primary-fixed",
+  "bg-secondary-fixed text-on-secondary-fixed",
+  "bg-tertiary-fixed text-on-tertiary-fixed",
+] as const;
 
 function statusTone(status: StudentStatus): "success" | "error" | "warning" | "neutral" {
   if (status === "active") return "success";
   if (status === "suspended") return "warning";
   return "error";
+}
+
+function studentInitials(student: Pick<Student, "first_name" | "last_name">): string {
+  const last = student.last_name?.trim().charAt(0) ?? "";
+  const first = student.first_name?.trim().charAt(0) ?? "";
+  return `${last}${first}`.toUpperCase() || "?";
+}
+
+function avatarTone(student: Pick<Student, "id" | "last_name">): string {
+  const seed = student.id + (student.last_name?.charCodeAt(0) ?? 0);
+  return AVATAR_PALETTES[Math.abs(seed) % AVATAR_PALETTES.length];
+}
+
+function StudentAvatar({ student }: { student: Student }) {
+  if (student.avatar_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        alt=""
+        className="w-7 h-7 shrink-0 object-cover bg-surface-container-high rounded-md"
+        height={28}
+        src={student.avatar_url}
+        width={28}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden
+      className={`w-7 h-7 shrink-0 inline-flex items-center justify-center text-[10px] font-semibold tracking-wide rounded-md ${avatarTone(student)}`}
+    >
+      {studentInitials(student)}
+    </span>
+  );
 }
 
 function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
@@ -63,6 +114,9 @@ export function StudentsManagementContent() {
   const confirmDialog = useConfirm();
   const { user } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_TABLE_PAGE_SIZE);
   const [levels, setLevels] = useState<AcademicRef[]>([]);
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,10 +127,6 @@ export function StudentsManagementContent() {
   const [status, setStatus] = useState("");
   const [sorting, setSorting] = useState<SortingState>([{ id: "last_name", desc: false }]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: DEFAULT_PAGE_SIZE,
-  });
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const canCreate = can(user, "students.create");
@@ -87,19 +137,16 @@ export function StudentsManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      const [list, levelList, classList, yearList] = await Promise.all([
-        listStudents(),
-        listLevels(),
-        listClassGroups(),
-        listAcademicYears(),
-      ]);
-      const activeYear = yearList.find((y) => y.is_active) ?? yearList[0];
-      const yearClasses = activeYear
-        ? classList.filter((c) => c.academic_year_id === activeYear.id)
-        : classList;
-      setStudents(list);
-      setLevels(levelList);
-      setClassGroups(yearClasses);
+      const result = await listStudentsPage({
+        ...(search ? { search } : {}),
+        ...(status ? { status } : {}),
+        ...(levelId ? { level_id: levelId } : {}),
+        ...(classGroupId ? { class_group_id: classGroupId } : {}),
+        page,
+        per_page: perPage,
+      });
+      setStudents(result.data);
+      setMeta(result.meta);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -109,17 +156,33 @@ export function StudentsManagementContent() {
 
   useEffect(() => {
     void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search/filters/page/perPage drive API filters
+  }, [search, status, levelId, classGroupId, page, perPage]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [levelList, classList, yearList] = await Promise.all([
+          listLevels(),
+          listClassGroups(),
+          listAcademicYears(),
+        ]);
+        const activeYear = yearList.find((y) => y.is_active) ?? yearList[0];
+        const yearClasses = activeYear
+          ? classList.filter((c) => c.academic_year_id === activeYear.id)
+          : classList;
+        setLevels(levelList);
+        setClassGroups(yearClasses);
+      } catch (err) {
+        setError(getAuthErrorMessage(err));
+      }
+    })();
   }, []);
 
   const filteredClassGroups = useMemo(() => {
     if (!levelId) return classGroups;
     return classGroups.filter((c) => String(c.level_id ?? "") === levelId);
   }, [classGroups, levelId]);
-
-  const filtered = useMemo(
-    () => filterStudents(students, { search, levelId, classGroupId, status }),
-    [students, search, levelId, classGroupId, status]
-  );
 
   const hasFilters = Boolean(search || levelId || classGroupId || status);
 
@@ -128,6 +191,7 @@ export function StudentsManagementContent() {
     setLevelId("");
     setClassGroupId("");
     setStatus("");
+    setPage(1);
   }
 
   async function handleDelete(student: Student) {
@@ -137,7 +201,11 @@ export function StudentsManagementContent() {
     setDeletingId(student.id);
     try {
       await deleteStudent(student.id);
-      setStudents((prev) => prev.filter((s) => s.id !== student.id));
+      if (students.length <= 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await reload();
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -153,25 +221,19 @@ export function StudentsManagementContent() {
         id: "select",
         enableSorting: false,
         header: ({ table }) => (
-          <input
-            aria-label="Tout sélectionner"
+          <Checkbox
+            ariaLabel="Tout sélectionner"
             checked={table.getIsAllPageRowsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            ref={(el) => {
-              if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-            }}
-            type="checkbox"
+            indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
+            onChange={(checked) => table.toggleAllPageRowsSelected(checked)}
           />
         ),
         cell: ({ row }) => (
-          <input
-            aria-label={`Sélectionner ${studentFullName(row.original)}`}
+          <Checkbox
+            ariaLabel={`Sélectionner ${studentFullName(row.original)}`}
             checked={row.getIsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
             disabled={!row.getCanSelect()}
-            onChange={row.getToggleSelectedHandler()}
-            type="checkbox"
+            onChange={(checked) => row.toggleSelected(checked)}
           />
         ),
       }),
@@ -180,12 +242,15 @@ export function StudentsManagementContent() {
         cell: ({ row }) => {
           const s = row.original;
           return (
-            <Link
-              className="font-semibold text-on-surface truncate hover:text-primary transition-colors"
-              href={`/students/${s.id}`}
-            >
-              {s.last_name}
-            </Link>
+            <div className="flex items-center gap-sm min-w-0">
+              <StudentAvatar student={s} />
+              <Link
+                className="font-semibold text-[13px] leading-5 text-on-surface truncate hover:text-primary transition-colors min-w-0"
+                href={`/students/${s.id}`}
+              >
+                {s.last_name}
+              </Link>
+            </div>
           );
         },
       }),
@@ -193,7 +258,7 @@ export function StudentsManagementContent() {
         header: "Prénom",
         cell: ({ row }) => (
           <Link
-            className="text-on-surface truncate hover:text-primary transition-colors"
+            className="text-[13px] leading-5 text-on-surface truncate hover:text-primary transition-colors"
             href={`/students/${row.original.id}`}
           >
             {row.original.first_name}
@@ -202,16 +267,22 @@ export function StudentsManagementContent() {
       }),
       columnHelper.accessor("email", {
         header: "E-mail",
-        cell: (info) => (
-          <span className="text-[13px] text-on-surface-variant truncate font-mono-data">
-            {info.getValue() || "—"}
-          </span>
-        ),
+        cell: (info) => {
+          const email = info.getValue();
+          if (!email) {
+            return <span className="text-on-surface-variant/50">—</span>;
+          }
+          return (
+            <span className="text-[12px] leading-5 text-on-surface-variant truncate font-mono-data max-w-[220px] block">
+              {email}
+            </span>
+          );
+        },
       }),
       columnHelper.accessor("matricule", {
         header: "Matricule",
         cell: (info) => (
-          <span className="font-mono-data text-[12px] text-on-surface-variant tracking-wide">
+          <span className="font-mono-data text-[11px] leading-5 tracking-wide text-on-surface-variant">
             {info.getValue()}
           </span>
         ),
@@ -219,16 +290,25 @@ export function StudentsManagementContent() {
       columnHelper.accessor((row) => row.class_group?.name ?? "", {
         id: "class",
         header: "Classe",
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium text-on-surface">
-              {row.original.class_group?.name || "—"}
+        cell: ({ row }) => {
+          const className = row.original.class_group?.name;
+          const levelName = row.original.level?.name;
+          if (!className) {
+            return <span className="text-on-surface-variant/50">—</span>;
+          }
+          return (
+            <div className="flex items-center gap-xs min-w-0">
+              <span className="inline-flex items-center h-5 px-sm rounded-md bg-secondary-fixed/50 text-on-secondary-fixed-variant text-[11px] font-semibold whitespace-nowrap">
+                {className}
+              </span>
+              {levelName ? (
+                <span className="text-[11px] leading-5 text-on-surface-variant truncate">
+                  {levelName}
+                </span>
+              ) : null}
             </div>
-            <div className="text-[12px] text-on-surface-variant">
-              {row.original.level?.name || "Niveau —"}
-            </div>
-          </div>
-        ),
+          );
+        },
       }),
       columnHelper.accessor("status", {
         header: "Statut",
@@ -274,28 +354,26 @@ export function StudentsManagementContent() {
   );
 
   const table = useReactTable({
-    data: filtered,
+    data: students,
     columns,
-    state: { sorting, rowSelection, pagination },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
     enableRowSelection: true,
     getRowId: (row) => String(row.id),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: meta.last_page,
   });
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
     setRowSelection({});
-  }, [search, levelId, classGroupId, status]);
+  }, [search, levelId, classGroupId, status, page, perPage]);
 
-  const { pageIndex, pageSize } = pagination;
-  const rowCount = filtered.length;
-  const from = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
-  const to = Math.min((pageIndex + 1) * pageSize, rowCount);
+  const from = meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1;
+  const to = Math.min(meta.current_page * meta.per_page, meta.total);
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length;
 
   return (
     <div className="flex flex-col w-full h-full max-w-[1400px] mx-auto gap-lg pb-xl">
@@ -308,99 +386,72 @@ export function StudentsManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label="Rechercher un élève"
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher par nom ou matricule..."
-                type="text"
-                value={search}
+      <DataTableShell>
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel="Rechercher un élève"
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
+            placeholder="Rechercher par nom ou matricule..."
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par statut"
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={[
+              { value: "active", label: "Actif" },
+              { value: "inactive", label: "Inactif" },
+              { value: "suspended", label: "Suspendu" },
+            ]}
+            placeholder="Tous les statuts"
+            value={status}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par niveau"
+            onChange={(v) => {
+              setLevelId(v);
+              setClassGroupId("");
+              setPage(1);
+            }}
+            options={levels.map((l) => ({ value: String(l.id), label: l.name }))}
+            placeholder="Tous les niveaux"
+            value={levelId}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par classe"
+            onChange={(v) => {
+              setClassGroupId(v);
+              setPage(1);
+            }}
+            options={filteredClassGroups.map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Toutes les classes"
+            value={classGroupId}
+          />
+          {hasFilters && <DataTableClearFilters onClick={clearFilters} />}
+          <DataTableToolbarActions>
+            <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
+            {canCreate && (
+              <CrudCreateLink
+                className={DATA_TABLE_CREATE_CLASS}
+                label="Nouvel élève"
+                resource="students"
               />
-            </div>
-            <select
-              aria-label="Filtrer par niveau"
-              className="ui-input cursor-pointer h-10 py-0"
-              onChange={(e) => {
-                setLevelId(e.target.value);
-                setClassGroupId("");
-              }}
-              value={levelId}
-            >
-              <option value="">Tous les niveaux</option>
-              {levels.map((l) => (
-                <option key={l.id} value={String(l.id)}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filtrer par classe"
-              className="ui-input cursor-pointer h-10 py-0"
-              onChange={(e) => setClassGroupId(e.target.value)}
-              value={classGroupId}
-            >
-              <option value="">Toutes les classes</option>
-              {filteredClassGroups.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filtrer par statut"
-              className="ui-input cursor-pointer h-10 py-0"
-              onChange={(e) => setStatus(e.target.value)}
-              value={status}
-            >
-              <option value="">Tous les statuts</option>
-              <option value="active">Actif</option>
-              <option value="inactive">Inactif</option>
-              <option value="suspended">Suspendu</option>
-            </select>
-            {hasFilters && (
-              <button
-                className="inline-flex items-center gap-xs h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
-                onClick={clearFilters}
-                type="button"
-              >
-                <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
-                Réinitialiser
-              </button>
             )}
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
-              <button
-                aria-label="Actualiser la liste"
-                className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors disabled:opacity-40 shadow-sm"
-                disabled={loading}
-                onClick={() => void reload()}
-                title="Actualiser"
-                type="button"
-              >
-                <span
-                  className={`material-symbols-outlined text-[20px] ${
-                    loading ? "animate-spin" : ""
-                  }`}
-                >
-                  refresh
-                </span>
-              </button>
-              {canCreate && (
-                <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
-                  label="Nouvel élève"
-                  resource="students"
-                />
-              )}
-            </div>
-        </div>
+          </DataTableToolbarActions>
+        </DataTableToolbar>
 
-        <div className="overflow-auto">
+        <DataTableSelectionBar
+          count={selectedCount}
+          entityLabel="élève"
+          onClear={() => setRowSelection({})}
+        />
+
+        <div className="overflow-x-auto">
           {loading ? (
             <DataTableSkeleton
               columns={STUDENTS_TABLE_SKELETON_COLUMNS}
@@ -409,32 +460,29 @@ export function StudentsManagementContent() {
               rows={10}
               testId="students-loading"
             />
-          ) : rowCount === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center px-lg py-2xl text-center"
-              data-testid="students-empty"
+          ) : meta.total === 0 ? (
+            <DataTableEmpty
+              description={
+                hasFilters
+                  ? "Aucun résultat pour ces filtres. Essayez un autre nom, niveau ou statut."
+                  : "L'annuaire est encore vide. Ajoutez le premier élève pour commencer."
+              }
+              icon="group_off"
+              testId="students-empty"
+              title="Aucun élève trouvé"
             >
-              <span className="material-symbols-outlined text-[40px] text-on-surface-variant/50 mb-md">
-                group_off
-              </span>
-              <h3 className="font-title-md text-on-surface mb-xs">Aucun élève trouvé</h3>
-              <p className="font-body-sm text-on-surface-variant max-w-sm mb-lg">
-                Aucun résultat pour ces filtres, ou l&apos;annuaire est encore vide.
-              </p>
-              <div className="flex flex-wrap gap-sm justify-center">
-                {hasFilters && (
-                  <button className="ui-btn-secondary" onClick={clearFilters} type="button">
-                    Effacer les filtres
-                  </button>
-                )}
-                {canCreate && <CrudCreateLink label="Nouvel élève" resource="students" />}
-              </div>
-            </div>
+              {hasFilters && (
+                <button className="ui-btn-secondary" onClick={clearFilters} type="button">
+                  Effacer les filtres
+                </button>
+              )}
+              {canCreate && <CrudCreateLink label="Nouvel élève" resource="students" />}
+            </DataTableEmpty>
           ) : (
             <table className="w-full text-left border-collapse" data-testid="students-table">
-              <thead className="bg-surface-container-low/80 sticky top-0 z-10">
+              <thead className="sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
+                  <tr className="ui-table-head-row" key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                       const sortable = header.column.getCanSort();
                       const direction = header.column.getIsSorted();
@@ -449,14 +497,11 @@ export function StudentsManagementContent() {
                                 ? "descending"
                                 : "none"
                           }
-                          className={`px-lg py-sm ui-stat-label whitespace-nowrap ${
-                            isActions
-                              ? "text-right sticky right-0 bg-surface-container-low/95 w-16"
-                              : isSelect
-                                ? "w-10"
-                                : ""
+                          className={`px-md py-[6px] whitespace-nowrap ${
+                            isActions ? "text-right w-12" : isSelect ? "w-10 px-md" : ""
                           }`}
                           key={header.id}
+                          scope="col"
                         >
                           {header.isPlaceholder ? null : sortable ? (
                             <button
@@ -476,29 +521,22 @@ export function StudentsManagementContent() {
                   </tr>
                 ))}
               </thead>
-              <tbody className="text-body-sm font-body-sm divide-y divide-outline-variant/10">
+              <tbody className="text-body-sm font-body-sm">
                 {table.getRowModel().rows.map((row) => {
-                  const zebra = row.index % 2 === 1;
+                  const selected = row.getIsSelected();
                   return (
                     <tr
-                      className={`group transition-colors hover:bg-surface-container-low/70 ${
-                        zebra ? "bg-surface-container-low/45" : "bg-surface-container-lowest"
-                      }`}
+                      className={tableRowClass(row.index, selected)}
                       key={row.id}
                     >
                       {row.getVisibleCells().map((cell) => {
                         const isActions = cell.column.id === "actions";
+                        const isSelect = cell.column.id === "select";
                         return (
                           <td
-                            className={`px-lg py-sm align-middle ${
-                              isActions
-                                ? `sticky right-0 text-right overflow-visible group-hover:bg-surface-container-low/70 ${
-                                    zebra
-                                      ? "bg-surface-container-low/45"
-                                      : "bg-surface-container-lowest"
-                                  }`
-                                : ""
-                            }`}
+                            className={`px-md py-[6px] align-middle ${
+                              isActions ? "text-right overflow-visible" : ""
+                            } ${isSelect ? "px-md" : ""}`}
                             key={cell.id}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -513,34 +551,30 @@ export function StudentsManagementContent() {
           )}
         </div>
 
-        {!loading && rowCount > 0 && (
+        {!loading && meta.total > 0 && (
           <DataTablePagination
-            canNextPage={table.getCanNextPage()}
-            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={meta.current_page < meta.last_page}
+            canPreviousPage={meta.current_page > 1}
             entityLabel="élèves"
-            filteredHint={
-              filtered.length !== students.length
-                ? `filtre sur ${students.length}`
-                : undefined
-            }
             from={from}
-            onFirstPage={() => table.setPageIndex(0)}
-            onLastPage={() => table.setPageIndex(table.getPageCount() - 1)}
-            onNextPage={() => table.nextPage()}
-            onPageChange={(index) => table.setPageIndex(index)}
-            onPageSizeChange={(size) =>
-              setPagination({ pageIndex: 0, pageSize: size })
-            }
-            onPreviousPage={() => table.previousPage()}
-            pageCount={table.getPageCount()}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
+            onFirstPage={() => setPage(1)}
+            onLastPage={() => setPage(meta.last_page)}
+            onNextPage={() => setPage((p) => p + 1)}
+            onPageChange={(index) => setPage(index + 1)}
+            onPageSizeChange={(size) => {
+              setPerPage(size);
+              setPage(1);
+            }}
+            onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+            pageCount={meta.last_page}
+            pageIndex={meta.current_page - 1}
+            pageSize={perPage}
             testId="students-pagination"
             to={to}
-            total={rowCount}
+            total={meta.total}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

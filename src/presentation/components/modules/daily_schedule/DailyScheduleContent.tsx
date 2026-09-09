@@ -85,8 +85,8 @@ export function DailyScheduleContent() {
 
       {forbidden && (
         <p className="font-body-md text-on-surface-variant" data-testid="schedule-forbidden">
-          L&apos;emploi du temps n&apos;est pas encore exposé aux comptes portail
-          (permission classes.view requise côté API). Contactez l&apos;établissement.
+          L&apos;emploi du temps n&apos;est pas encore accessible depuis votre compte.
+          Contactez l&apos;établissement.
         </p>
       )}
 

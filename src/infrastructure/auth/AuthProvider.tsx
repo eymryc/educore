@@ -25,8 +25,6 @@ import { ApiError } from "@/shared/types/api.types";
 
 type AuthStatus = "loading" | "authenticated" | "anonymous";
 
-const TOKEN_REFRESH_INTERVAL_MS = 45 * 60 * 1000;
-
 interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
@@ -81,6 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Rotation manuelle du token uniquement — ne JAMAIS déclencher ceci
+  // automatiquement (interval, focus de fenêtre, etc). POST /auth/refresh
+  // révoque le token courant avant d'en émettre un nouveau (côté API) ; tout
+  // appel réseau encore en vol avec l'ancien token à ce moment-là reçoit un
+  // 401, ce qui déclenche la déconnexion globale (`onUnauthorized` dans
+  // client.ts) et efface même le nouveau token pourtant valide — un
+  // précédent déclenchement automatique (toutes les 45 min + à chaque focus)
+  // provoquait des déconnexions aléatoires sur les sessions longues/multi-
+  // onglets. Les tokens Sanctum n'expirent pas ici (`sanctum.expiration =
+  // null`), donc cette rotation n'apporte aucun bénéfice à automatiser.
   const refreshToken = useCallback(async () => {
     if (!getToken()) return false;
     try {
@@ -96,35 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refreshUser();
   }, [refreshUser]);
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
-
-    const onFocus = () => {
-      void refreshToken();
-    };
-
-    window.addEventListener("focus", onFocus);
-    const intervalId = window.setInterval(() => {
-      void refreshToken();
-    }, TOKEN_REFRESH_INTERVAL_MS);
-
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.clearInterval(intervalId);
-    };
-  }, [status, refreshToken]);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const result = await loginRequest(email, password);
-      setToken(result.token);
-      setUser(result.user);
-      setStatus("authenticated");
-      void refreshToken();
-      return homePathForUser(result.user);
-    },
-    [refreshToken]
-  );
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await loginRequest(email, password);
+    setToken(result.token);
+    setUser(result.user);
+    setStatus("authenticated");
+    return homePathForUser(result.user);
+  }, []);
 
   const logout = useCallback(async () => {
     try {

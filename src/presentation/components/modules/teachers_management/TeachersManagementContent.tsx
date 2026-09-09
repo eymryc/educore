@@ -22,6 +22,16 @@ import {
   tableRowClass,
   useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
+import {
+  DATA_TABLE_CREATE_CLASS,
+  DataTableClearFilters,
+  DataTableEmpty,
+  DataTableFilterSelect,
+  DataTableSearch,
+  DataTableShell,
+  DataTableToolbar,
+  DataTableToolbarActions,
+} from "@/presentation/components/shared/DataTable";
 import { listSubjects } from "@/infrastructure/api/resources/academic";
 import { deleteTeacher, listTeachers } from "@/infrastructure/api/resources/teachers";
 import { useAuth, getAuthErrorMessage } from "@/infrastructure/auth/AuthProvider";
@@ -133,68 +143,43 @@ export function TeachersManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex-1 flex flex-col">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher un enseignant"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom, e-mail ou n° employé…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par matière"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setSubjectId(e.target.value)}
+      <DataTableShell>
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel="Rechercher un enseignant"
+            onChange={setSearch}
+            placeholder="Rechercher par nom, e-mail ou n° employé…"
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par matière"
+            onChange={setSubjectId}
+            options={subjects.map((s) => ({ value: String(s.id), label: s.name }))}
+            placeholder="Toutes les matières"
             value={subjectId}
-          >
-            <option value="">Toutes les matières</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={String(s.id)}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrer par statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par statut"
+            onChange={setStatus}
+            options={(Object.keys(TEACHER_STATUS_LABELS) as TeacherStatus[]).map((key) => ({
+              value: key,
+              label: TEACHER_STATUS_LABELS[key],
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {(Object.keys(TEACHER_STATUS_LABELS) as TeacherStatus[]).map((key) => (
-              <option key={key} value={key}>
-                {TEACHER_STATUS_LABELS[key]}
-              </option>
-            ))}
-          </select>
-          {hasFilters && (
-            <button
-              className="inline-flex items-center gap-xs h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
-              onClick={clearFilters}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
-              Réinitialiser
-            </button>
-          )}
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          {hasFilters && <DataTableClearFilters onClick={clearFilters} />}
+          <DataTableToolbarActions>
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="AJOUTER UN ENSEIGNANT"
                 resource="teachers"
               />
             )}
-          </div>
-        </div>
+          </DataTableToolbarActions>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -216,19 +201,14 @@ export function TeachersManagementContent() {
               testId="teachers-loading"
             />
           ) : filtered.length === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center p-2xl text-center"
-              data-testid="teachers-empty"
+            <DataTableEmpty
+              description="Aucun enseignant ne correspond à vos filtres, ou la liste est vide."
+              icon="school"
+              testId="teachers-empty"
+              title="Aucun enseignant trouvé"
             >
-              <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-md">
-                school
-              </span>
-              <h3 className="font-headline-md text-headline-md mb-xs">Aucun enseignant trouvé</h3>
-              <p className="font-body-md text-on-surface-variant mb-lg max-w-md">
-                Aucun enseignant ne correspond à vos filtres, ou la liste est vide.
-              </p>
               {canCreate && <CrudCreateLink resource="teachers" label="AJOUTER UN ENSEIGNANT" />}
-            </div>
+            </DataTableEmpty>
           ) : (
             <table className="w-full text-left border-collapse" data-testid="teachers-table">
               <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -348,7 +328,7 @@ export function TeachersManagementContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

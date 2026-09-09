@@ -14,6 +14,13 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -217,8 +224,8 @@ export function AcademicStructureContent() {
       {loading && <ContentSkeleton testId="academic-structure-loading" variant="table" />}
 
       {!loading && tab === "years" && (
-        <div className="ui-table-shell" data-testid="academic-years-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="academic-years-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -235,30 +242,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -382,12 +382,12 @@ export function AcademicStructureContent() {
               total={filteredYears.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
 
       {!loading && tab === "periods" && (
-        <div className="ui-table-shell" data-testid="academic-periods-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="academic-periods-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -404,30 +404,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -511,12 +504,12 @@ export function AcademicStructureContent() {
               total={filteredPeriods.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
 
       {!loading && tab === "holidays" && (
-        <div className="ui-table-shell" data-testid="academic-holidays-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="academic-holidays-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -533,30 +526,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -638,12 +624,12 @@ export function AcademicStructureContent() {
               total={filteredHolidays.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
 
       {!loading && tab === "levels" && (
-        <div className="ui-table-shell" data-testid="levels-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="levels-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -660,30 +646,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -763,12 +742,12 @@ export function AcademicStructureContent() {
               total={filteredLevels.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
 
       {!loading && tab === "series" && (
-        <div className="ui-table-shell" data-testid="series-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="series-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -785,30 +764,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -888,12 +860,12 @@ export function AcademicStructureContent() {
               total={filteredSeries.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
 
       {!loading && tab === "class-subjects" && (
-        <div className="ui-table-shell" data-testid="class-subjects-table">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+        <DataTableShell testId="class-subjects-table">
+          <DataTableToolbar>
             <div className="flex flex-wrap gap-xs" data-testid="academic-structure-tabs">
               {TABS.map((t) => (
                 <button
@@ -910,30 +882,23 @@ export function AcademicStructureContent() {
                 </button>
               ))}
             </div>
-            <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                aria-label={searchPlaceholder[tab]}
-                className="ui-search-input ml-sm h-full"
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={searchPlaceholder[tab]}
-                type="text"
-                value={search}
-              />
-            </div>
-            <div className="ml-auto shrink-0 flex items-center gap-sm">
+            <DataTableSearch
+            ariaLabel={searchPlaceholder[tab]}
+            onChange={setSearch}
+            placeholder={searchPlaceholder[tab]}
+            value={search}
+          />
+            <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
               <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
               {canCreate && (
                 <CrudCreateLink
-                  className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                  className={DATA_TABLE_CREATE_CLASS}
                   label={createLabels[tab]}
                   resource={createResource[tab]}
                 />
               )}
             </div>
-          </div>
+          </DataTableToolbar>
           <div className="overflow-x-auto min-h-[320px]">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface-container-low/80 sticky top-0 z-10">
@@ -1033,7 +998,7 @@ export function AcademicStructureContent() {
               total={filteredClassSubjects.length}
             />
           )}
-        </div>
+        </DataTableShell>
       )}
     </div>
   );

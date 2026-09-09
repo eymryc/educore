@@ -86,4 +86,47 @@ describe("apiRequest", () => {
       errors: { email: ["Obligatoire"] },
     } satisfies Partial<ApiError>);
   });
+
+  it("surfaces the backend's error message on a failed raw (file) request", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 404,
+        ok: false,
+        json: async () => ({
+          success: false,
+          message: "PDF du bulletin introuvable.",
+        }),
+      })
+    );
+
+    await expect(
+      apiRequest("/report-cards/1/download", { raw: true })
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "PDF du bulletin introuvable.",
+    } satisfies Partial<ApiError>);
+  });
+
+  it("falls back to a generic message when a failed raw request has no JSON body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 500,
+        ok: false,
+        json: async () => {
+          throw new Error("not json");
+        },
+      })
+    );
+
+    await expect(
+      apiRequest("/report-cards/1/download", { raw: true })
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      message: "Échec du téléchargement.",
+    } satisfies Partial<ApiError>);
+  });
 });

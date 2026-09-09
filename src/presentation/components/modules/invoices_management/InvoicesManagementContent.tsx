@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
 import {
   crudRowActions,
@@ -14,29 +14,42 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
+  DEFAULT_TABLE_PAGE_SIZE,
   tableRowClass,
-  useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
 import {
   deleteInvoice,
   downloadInvoiceReceipt,
+  generateInvoices,
   issueInvoice,
   listInvoices,
 } from "@/infrastructure/api/resources/finance";
+import { listAcademicYears, listClassGroups } from "@/infrastructure/api/resources/academic";
+import { listStudents } from "@/infrastructure/api/resources/students";
 import { useAuth, getAuthErrorMessage } from "@/infrastructure/auth/AuthProvider";
 import { can } from "@/shared/lib/permissions";
+import { emptyPaginationMeta, type PaginationMeta } from "@/shared/types/api.types";
+import type { AcademicYear, ClassGroup } from "@/shared/types/academic.types";
 import {
   INVOICE_STATUS_LABELS,
   canEditInvoice,
   canIssueInvoice,
-  filterInvoices,
   formatMoneyFcfa,
   type Invoice,
   type InvoiceStatus,
 } from "@/shared/types/finance.types";
-import { studentFullName } from "@/shared/types/student.types";
+import { studentFullName, type Student } from "@/shared/types/student.types";
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
 
 function invoiceTone(
@@ -53,12 +66,25 @@ export function InvoicesManagementContent() {
   const confirmDialog = useConfirm();
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_TABLE_PAGE_SIZE);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [classId, setClassId] = useState("");
+  const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
+
+  const [showGenerate, setShowGenerate] = useState(false);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [generateStudentId, setGenerateStudentId] = useState("");
+  const [generateYearId, setGenerateYearId] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const canCreate = can(user, "finance.create");
   const canUpdate = can(user, "finance.update");
@@ -68,7 +94,15 @@ export function InvoicesManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      setInvoices(await listInvoices(status ? { status } : undefined));
+      const result = await listInvoices({
+        ...(status ? { status } : {}),
+        ...(classId ? { class_group_id: classId } : {}),
+        ...(search ? { search } : {}),
+        page,
+        per_page: perPage,
+      });
+      setInvoices(result.data);
+      setMeta(result.meta);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -78,31 +112,46 @@ export function InvoicesManagementContent() {
 
   useEffect(() => {
     void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- status drives API filter
-  }, [status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search/status/classId/page/perPage drive API filters
+  }, [search, status, classId, page, perPage]);
 
-  const filtered = useMemo(
-    () => filterInvoices(invoices, { search, status: "" }),
-    [invoices, search]
-  );
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, status, classId, page, perPage]);
 
-  const {
-    pageIndex,
-    pageSize,
-    pageCount,
-    pageRows,
-    from,
-    to,
-    selectedIds,
-    allPageSelected,
-    somePageSelected,
-    setPageIndex,
-    setPageSize,
-    toggleAllPage,
-    toggleOne,
-    canPreviousPage,
-    canNextPage,
-  } = useClientDataTable(filtered, [search, status]);
+  useEffect(() => {
+    void listClassGroups()
+      .then(setClassGroups)
+      .catch((err) => setError(getAuthErrorMessage(err)));
+  }, []);
+
+  const allPageSelected =
+    invoices.length > 0 && invoices.every((inv) => selectedIds.has(inv.id));
+  const somePageSelected = invoices.some((inv) => selectedIds.has(inv.id));
+
+  function toggleAllPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        invoices.forEach((inv) => next.delete(inv.id));
+      } else {
+        invoices.forEach((inv) => next.add(inv.id));
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const from = meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1;
+  const to = Math.min(meta.current_page * meta.per_page, meta.total);
 
   async function handleIssue(inv: Invoice) {
     if (!canUpdate || !canIssueInvoice(inv.status)) return;
@@ -131,6 +180,50 @@ export function InvoicesManagementContent() {
       setError(getAuthErrorMessage(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openGeneratePanel() {
+    setShowGenerate(true);
+    setError(null);
+    if (students.length === 0 || academicYears.length === 0) {
+      try {
+        const [studentList, yearList] = await Promise.all([listStudents(), listAcademicYears()]);
+        setStudents(studentList);
+        setAcademicYears(yearList);
+        const activeYear = yearList.find((y) => y.is_active) ?? yearList[0];
+        if (activeYear) setGenerateYearId(String(activeYear.id));
+      } catch (err) {
+        setError(getAuthErrorMessage(err));
+      }
+    }
+  }
+
+  async function handleGenerate() {
+    if (!generateStudentId || !generateYearId) {
+      setError("Sélectionnez un élève et une année scolaire.");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const created = await generateInvoices({
+        student_id: generateStudentId,
+        academic_year_id: generateYearId,
+      });
+      setNotice(
+        created.length === 0
+          ? "Aucune nouvelle facture à générer (déjà existantes)."
+          : `${created.length} facture(s) générée(s).`
+      );
+      setShowGenerate(false);
+      setGenerateStudentId("");
+      await reload();
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -165,45 +258,114 @@ export function InvoicesManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="invoices-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher n° ou élève…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+      <DataTableShell testId="invoices-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
+            placeholder={"Rechercher n° ou élève…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par statut"
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((s) => ({
+              value: s,
+              label: INVOICE_STATUS_LABELS[s],
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {INVOICE_STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par classe"
+            onChange={(v) => {
+              setClassId(v);
+              setPage(1);
+            }}
+            options={classGroups.map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Toutes les classes"
+            value={classId}
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
+              <button
+                className="inline-flex items-center gap-sm h-10 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                onClick={() => void openGeneratePanel()}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                Générer les factures
+              </button>
+            )}
+            {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="NOUVELLE FACTURE"
                 resource="invoices"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
+
+        {showGenerate && (
+          <div
+            className="px-lg py-md flex flex-wrap items-end gap-sm bg-surface-container-low/80 border-b border-outline-variant/15"
+            data-testid="generate-invoices-panel"
+          >
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[220px]">
+              <span className="ui-stat-label">Élève</span>
+              <Select
+                ariaLabel="Élève"
+                className="ui-input h-10 py-0"
+                onChange={setGenerateStudentId}
+                options={students.map((s) => ({
+                  value: String(s.id),
+                  label: `${studentFullName(s)} — ${s.matricule}`,
+                }))}
+                placeholder="Sélectionner…"
+                searchable
+                value={generateStudentId}
+              />
+            </label>
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[180px]">
+              <span className="ui-stat-label">Année scolaire</span>
+              <Select
+                ariaLabel="Année scolaire"
+                className="ui-input h-10 py-0"
+                onChange={setGenerateYearId}
+                options={academicYears.map((y) => ({
+                  value: String(y.id),
+                  label: `${y.name}${y.is_active ? " · active" : ""}`,
+                }))}
+                placeholder="Sélectionner…"
+                searchable
+                value={generateYearId}
+              />
+            </label>
+            <button
+              className="inline-flex items-center gap-sm h-9 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm disabled:opacity-50"
+              disabled={generating}
+              onClick={() => void handleGenerate()}
+              type="button"
+            >
+              {generating ? "Génération…" : "Générer"}
+            </button>
+            <button
+              className="inline-flex items-center h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
+              onClick={() => setShowGenerate(false)}
+              type="button"
+            >
+              Annuler
+            </button>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -228,14 +390,14 @@ export function InvoicesManagementContent() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {invoices.length === 0 ? (
                   <tr>
                     <td className="py-lg px-lg text-on-surface-variant" colSpan={9}>
                       Aucune facture.
                     </td>
                   </tr>
                 ) : (
-                  pageRows.map((inv, index) => (
+                  invoices.map((inv, index) => (
                     <tr className={tableRowClass(index)} key={inv.id}>
                       <DataTableSelectCell
                         checked={selectedIds.has(inv.id)}
@@ -313,26 +475,29 @@ export function InvoicesManagementContent() {
           )}
         </div>
 
-        {!loading && filtered.length > 0 && (
+        {!loading && meta.total > 0 && (
           <DataTablePagination
-            canNextPage={canNextPage}
-            canPreviousPage={canPreviousPage}
+            canNextPage={meta.current_page < meta.last_page}
+            canPreviousPage={meta.current_page > 1}
             entityLabel="factures"
             from={from}
-            onFirstPage={() => setPageIndex(0)}
-            onLastPage={() => setPageIndex(pageCount - 1)}
-            onNextPage={() => setPageIndex(pageIndex + 1)}
-            onPageChange={setPageIndex}
-            onPageSizeChange={setPageSize}
-            onPreviousPage={() => setPageIndex(pageIndex - 1)}
-            pageCount={pageCount}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
+            onFirstPage={() => setPage(1)}
+            onLastPage={() => setPage(meta.last_page)}
+            onNextPage={() => setPage((p) => p + 1)}
+            onPageChange={(index) => setPage(index + 1)}
+            onPageSizeChange={(size) => {
+              setPerPage(size);
+              setPage(1);
+            }}
+            onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+            pageCount={meta.last_page}
+            pageIndex={meta.current_page - 1}
+            pageSize={perPage}
             to={to}
-            total={filtered.length}
+            total={meta.total}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

@@ -183,7 +183,7 @@ export function SchedulesManagementContent() {
           </div>
         </aside>
 
-        <div className="flex-1 bg-surface-container-lowest rounded-xl shadow-sm p-lg border border-outline-variant/20">
+        <div className="flex-1 min-w-0 bg-surface-container-lowest rounded-xl shadow-sm p-md sm:p-lg border border-outline-variant/20">
           {loading ? (
             <ContentSkeleton
               label="Chargement de l'emploi du temps…"

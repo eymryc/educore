@@ -13,6 +13,13 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
 import { ContentTabs } from "@/presentation/components/shared/ContentTabs";
 import {
   tableRowClass,
@@ -35,6 +42,9 @@ import {
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
 
 type Tab = "registers" | "transactions";
+
+const CARD_CLASS =
+  "border border-outline-variant/30 bg-white overflow-hidden shadow-[0_2px_4px_rgb(15_23_42/0.06),0_8px_24px_rgb(15_23_42/0.1),0_20px_48px_rgb(15_23_42/0.12)]";
 
 export function CashManagementContent() {
   const confirmDialog = useConfirm();
@@ -99,6 +109,27 @@ export function CashManagementContent() {
 
   return (
     <div className="flex flex-col w-full gap-lg pb-xl max-w-7xl mx-auto">
+      <section className={CARD_CLASS} data-testid="cash-intro">
+        <div className="flex items-start gap-md px-md sm:px-lg py-md bg-[#f7f9fb]">
+          <span className="w-10 h-10 bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
+            <span aria-hidden className="material-symbols-outlined text-[22px]">
+              point_of_sale
+            </span>
+          </span>
+          <div className="min-w-0">
+            <h2 className="font-title-sm text-[16px] text-on-surface">
+              Suivi de l&apos;argent liquide réellement en caisse
+            </h2>
+            <p className="text-[13px] text-on-surface-variant mt-0.5">
+              Distinct des factures/paiements élèves : chaque caisse (guichet, cantine…) a
+              un solde et un responsable ; chaque mouvement (recette, dépense, transfert,
+              ajustement) sert à faire correspondre ce solde théorique à l&apos;argent
+              compté physiquement en fin de journée.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {error && (
         <div
           className="rounded-lg bg-error-container text-on-error-container px-md py-sm"
@@ -109,7 +140,7 @@ export function CashManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex flex-col">
+      <DataTableShell>
         <ContentTabs
           items={[
             { id: "registers", label: "Caisses", count: registers.length },
@@ -123,31 +154,24 @@ export function CashManagementContent() {
           value={tab}
         />
 
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label={searchLabel}
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder}
-              type="text"
-              value={search}
-            />
-          </div>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={searchLabel}
+            onChange={setSearch}
+            placeholder={searchPlaceholder}
+            value={search}
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label={createLabel}
                 resource={createResource}
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         {tab === "registers" && (
           <>
@@ -335,7 +359,7 @@ export function CashManagementContent() {
             )}
           </>
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

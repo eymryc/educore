@@ -69,7 +69,7 @@ export function TransportRoutesContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`transport.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }

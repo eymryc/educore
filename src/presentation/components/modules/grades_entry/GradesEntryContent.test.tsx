@@ -134,7 +134,8 @@ describe("GradesEntryContent", () => {
 
     await waitFor(() => expect(screen.getByTestId("grades-empty")).toBeInTheDocument());
 
-    await user.selectOptions(screen.getByLabelText("Évaluation"), "5");
+    await user.click(screen.getByLabelText("Évaluation"));
+    await user.click(await screen.findByRole("option", { name: /Devoir algèbre/i }));
     await waitFor(() => expect(screen.getByTestId("grades-table")).toBeInTheDocument());
     expect(screen.getByText("Koné Awa")).toBeInTheDocument();
   });
@@ -165,10 +166,9 @@ describe("GradesEntryContent", () => {
     });
 
     render(<GradesEntryContent />);
-    await waitFor(() => {
-      expect(screen.getByRole("option", { name: /Devoir algèbre/i })).toBeInTheDocument();
-    });
-    await user.selectOptions(screen.getByLabelText("Évaluation"), "5");
+    await waitFor(() => expect(listAssessments).toHaveBeenCalled());
+    await user.click(screen.getByLabelText("Évaluation"));
+    await user.click(await screen.findByRole("option", { name: /Devoir algèbre/i }));
     await waitFor(() => expect(screen.getByText("Koné Awa")).toBeInTheDocument());
 
     await user.clear(screen.getByLabelText("Note de Koné Awa"));

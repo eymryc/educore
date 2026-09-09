@@ -36,9 +36,12 @@ export interface AcademicHoliday {
   updated_at?: string | null;
 }
 
+export type LevelCycle = "college" | "lycee";
+
 export interface Level extends NamedRef {
   institution_id?: number;
   sort_order?: number | null;
+  cycle?: LevelCycle | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -73,6 +76,7 @@ export interface AcademicPeriod {
   end_date: string | null;
   sort_order: number | null;
   status: string | null;
+  academic_year?: AcademicYear | NamedRef | null;
   created_at?: string | null;
   updated_at?: string | null;
 }

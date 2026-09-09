@@ -40,10 +40,18 @@ export function FeesPaymentsContent() {
         setInvoices([]);
         return;
       }
-      if (isParent || can(user, "payments.view")) {
-        setInvoices(await listInvoices());
+      if (isParent) {
+        // Un parent n'a jamais des dizaines de factures (borné par son
+        // nombre d'enfants) — un per_page généreux évite d'avoir besoin
+        // d'une pagination sur cette vue "mes frais" volontairement simple.
+        const result = await listInvoices({ per_page: 100 });
+        setInvoices(result.data);
         setStudentUnpaid(null);
       } else {
+        // Portail élève/parent uniquement : un membre du personnel qui
+        // prévisualise cette page (ex. admin) n'a pas de "mes frais" à
+        // afficher — ne pas appeler /invoices sans filtre élève (ça
+        // ramènerait une page de factures de toute l'école, sans rapport).
         setInvoices([]);
       }
     } catch (err) {

@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 import {
   crudRowActions,
   DataTableActionsMenu,
@@ -23,6 +24,14 @@ import {
   DataTableSkeleton,
 } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
 import {
   deleteClassGroup,
   listAcademicYears,
@@ -132,25 +141,19 @@ export function ClassesManagementContent() {
         id: "select",
         enableSorting: false,
         header: ({ table }) => (
-          <input
-            aria-label="Tout sélectionner"
+          <Checkbox
+            ariaLabel="Tout sélectionner"
             checked={table.getIsAllPageRowsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            ref={(el) => {
-              if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-            }}
-            type="checkbox"
+            indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
+            onChange={(checked) => table.toggleAllPageRowsSelected(checked)}
           />
         ),
         cell: ({ row }) => (
-          <input
-            aria-label={`Sélectionner ${row.original.name}`}
+          <Checkbox
+            ariaLabel={`Sélectionner ${row.original.name}`}
             checked={row.getIsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
             disabled={!row.getCanSelect()}
-            onChange={row.getToggleSelectedHandler()}
-            type="checkbox"
+            onChange={(checked) => row.toggleSelected(checked)}
           />
         ),
       }),
@@ -257,34 +260,21 @@ export function ClassesManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher une classe"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une classe…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par niveau"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setLevelId(e.target.value)}
+      <DataTableShell>
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher une classe"}
+            onChange={setSearch}
+            placeholder={"Rechercher une classe…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par niveau"
+            onChange={setLevelId}
+            options={levels.map((l) => ({ value: String(l.id), label: l.name }))}
+            placeholder="Tous les niveaux"
             value={levelId}
-          >
-            <option value="">Tous les niveaux</option>
-            {levels.map((l) => (
-              <option key={l.id} value={String(l.id)}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+          />
           {hasFilters && (
             <button
               className="inline-flex items-center gap-xs h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
@@ -295,7 +285,7 @@ export function ClassesManagementContent() {
               Réinitialiser
             </button>
           )}
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <button
               aria-label="Actualiser la liste"
               className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors disabled:opacity-40 shadow-sm"
@@ -312,13 +302,13 @@ export function ClassesManagementContent() {
             </button>
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="Nouvelle classe"
                 resource="classes"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-auto">
           {loading ? (
@@ -456,7 +446,7 @@ export function ClassesManagementContent() {
             total={rowCount}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

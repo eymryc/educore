@@ -158,7 +158,8 @@ describe("ParentDetailContent", () => {
     render(<ParentDetailContent />);
     await waitFor(() => expect(screen.getByTestId("parent-linked-empty")).toBeInTheDocument());
 
-    await user.selectOptions(screen.getByLabelText(/^Élève$/i), "9");
+    await user.click(screen.getByLabelText(/^Élève$/i));
+    await user.click(await screen.findByRole("option", { name: /Traoré Jean/i }));
     await user.click(screen.getByRole("button", { name: /Lier l'élève/i }));
 
     await waitFor(() => {

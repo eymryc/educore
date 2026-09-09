@@ -23,6 +23,13 @@ import {
   type CanteenMenu,
 } from "@/shared/types/canteen.types";
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DATA_TABLE_CREATE_CLASS,
+  DataTableFilterSelect,
+} from "@/presentation/components/shared/DataTable";
+
 
 const DAY_ACCENT: Record<CanteenDayOfWeek, string> = {
   lundi: "bg-tertiary-fixed text-on-tertiary-fixed",
@@ -155,7 +162,7 @@ export function CanteenMenusContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`canteen.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }
@@ -174,8 +181,8 @@ export function CanteenMenusContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex flex-col !mt-0">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/20">
+      <DataTableShell className="!mt-0">
+        <DataTableToolbar>
           <div className="inline-flex items-center gap-sm min-w-0">
             <span
               aria-hidden
@@ -193,30 +200,25 @@ export function CanteenMenusContent() {
               </div>
             </div>
           </div>
-          <select
-            aria-label="Filtrer par jour"
-            className="ui-input cursor-pointer h-10 py-0 ml-md min-w-[160px]"
-            onChange={(e) => setDayFilter(e.target.value)}
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par jour"
+            className="sm:min-w-[160px]"
+            onChange={setDayFilter}
+            options={CANTEEN_DAYS_ORDER.map((d) => ({ value: d, label: CANTEEN_DAY_LABELS[d] }))}
+            placeholder="Tous les jours"
             value={dayFilter}
-          >
-            <option value="">Tous les jours</option>
-            {CANTEEN_DAYS_ORDER.map((d) => (
-              <option key={d} value={d}>
-                {CANTEEN_DAY_LABELS[d]}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="Ajouter un menu"
                 resource="canteen-menus"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="p-md bg-surface-container-low/40">
           {loading ? (
@@ -347,7 +349,7 @@ export function CanteenMenusContent() {
             </div>
           )}
         </div>
-      </div>
+      </DataTableShell>
     </div>
   );
 }

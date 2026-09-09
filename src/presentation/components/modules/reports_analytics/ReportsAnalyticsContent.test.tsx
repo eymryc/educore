@@ -89,11 +89,13 @@ describe("ReportsAnalyticsContent", () => {
     const user = userEvent.setup();
     render(<ReportsAnalyticsContent />);
 
-    await user.selectOptions(screen.getByLabelText(/type de rapport/i), "students");
+    await user.click(screen.getByLabelText(/type de rapport/i));
+    await user.click(await screen.findByRole("option", { name: /^Élèves$/i }));
     await waitFor(() => {
       expect(screen.getByLabelText(/filtrer par classe/i)).toBeInTheDocument();
     });
-    await user.selectOptions(screen.getByLabelText(/filtrer par classe/i), "3");
+    await user.click(screen.getByLabelText(/filtrer par classe/i));
+    await user.click(await screen.findByRole("option", { name: /6ème A/i }));
     await user.click(screen.getByRole("button", { name: /^csv$/i }));
 
     await waitFor(() => {

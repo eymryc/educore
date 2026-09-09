@@ -87,10 +87,12 @@ export function DataTableActionsMenu({
   ariaLabel,
   items,
   testId = "row-actions",
+  dense = true,
 }: {
   ariaLabel: string;
   items: DataTableMenuItem[];
   testId?: string;
+  dense?: boolean;
 }) {
   const menuItems = normalizeItems(items);
   const [open, setOpen] = useState(false);
@@ -120,11 +122,13 @@ export function DataTableActionsMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={ariaLabel}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"
+        className={`inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors ${
+          dense ? "w-7 h-7" : "w-8 h-8"
+        }`}
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+        <span className={`material-symbols-outlined ${dense ? "text-[18px]" : "text-[20px]"}`}>more_vert</span>
       </button>
       {open && (
         <div

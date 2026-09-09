@@ -105,9 +105,8 @@ describe("LeaveAbsencesContent", () => {
   it("lists leaves and attendance", async () => {
     const user = userEvent.setup();
     render(<LeaveAbsencesContent />);
-    await waitFor(() => expect(listStaffLeaves).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText("Awa Koné")).toBeInTheDocument());
     expect(listStaffAttendance).toHaveBeenCalled();
-    expect(screen.getByText("Awa Koné")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: /Présences/i }));
     expect(await screen.findByTestId("attendance-table")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Nouvelle présence/i })).toHaveAttribute(

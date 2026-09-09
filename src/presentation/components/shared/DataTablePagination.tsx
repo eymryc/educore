@@ -1,6 +1,12 @@
 "use client";
 
+import { Select } from "@/presentation/components/shared/Select";
+
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+const PAGE_SIZE_SELECT_OPTIONS = PAGE_SIZE_OPTIONS.map((size) => ({
+  value: String(size),
+  label: String(size),
+}));
 
 function pageWindow(current: number, total: number): (number | "ellipsis")[] {
   if (total <= 7) {
@@ -57,9 +63,9 @@ export function DataTablePagination({
   const pages = pageWindow(current, Math.max(1, pageCount));
 
   return (
-    <div className="px-lg py-md border-t border-outline-variant/15 flex flex-col sm:flex-row sm:items-center justify-between gap-md bg-surface-container-low/50">
+    <div className="ui-table-chrome border-t-2 border-outline-variant/30 justify-between flex-nowrap overflow-x-auto">
       <div
-        className="flex flex-wrap items-center gap-md font-body-sm text-[13px] text-on-surface-variant"
+        className="flex items-center gap-sm font-body-sm text-[13px] text-on-surface-variant shrink-0 whitespace-nowrap"
         data-testid={testId}
       >
         <p>
@@ -79,23 +85,19 @@ export function DataTablePagination({
             <span className="text-[12px] uppercase tracking-wide text-on-surface-variant/70">
               Par page
             </span>
-            <select
-              aria-label="Nombre d'éléments par page"
-              className="ui-input h-9 py-0 cursor-pointer min-w-[4.5rem]"
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              value={pageSize}
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <Select
+              ariaLabel="Nombre d'éléments par page"
+              className="ui-input h-9 py-0 cursor-pointer min-w-[4.5rem] bg-white border border-outline-variant/25"
+              onChange={(v) => onPageSizeChange(Number(v))}
+              options={PAGE_SIZE_SELECT_OPTIONS}
+              searchable={false}
+              value={String(pageSize)}
+            />
           </label>
         )}
       </div>
 
-      <div className="flex items-center gap-xs flex-wrap">
+      <div className="flex items-center gap-xs shrink-0">
         <button
           aria-label="Première page"
           className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface disabled:opacity-35 disabled:pointer-events-none transition-colors"

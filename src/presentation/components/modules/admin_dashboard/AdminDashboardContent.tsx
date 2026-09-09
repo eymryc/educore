@@ -68,8 +68,8 @@ function StatTile({
 
   const valueClass =
     tone === "accent"
-      ? "text-[1.85rem] font-semibold leading-none text-on-primary"
-      : "text-[1.85rem] font-semibold leading-none text-on-surface";
+      ? "text-[1.35rem] sm:text-[1.85rem] font-semibold leading-tight text-on-primary"
+      : "text-[1.35rem] sm:text-[1.85rem] font-semibold leading-tight text-on-surface";
 
   const iconWrap =
     tone === "accent"
@@ -79,17 +79,17 @@ function StatTile({
         : "bg-surface-container-high text-on-surface-variant";
 
   const body = (
-    <div className={`${shell} rounded-xl p-lg flex flex-col gap-md h-full min-h-[8rem]`}>
+    <div className={`${shell} rounded-xl p-md sm:p-lg flex flex-col gap-sm sm:gap-md h-full min-h-[6.5rem] sm:min-h-[8rem] min-w-0`}>
       <div className="flex justify-between items-start gap-sm">
         <span className={labelClass}>{label}</span>
         <span
-          className={`${iconWrap} w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0`}
+          className={`${iconWrap} w-9 h-9 sm:w-10 sm:h-10 rounded-xl inline-flex items-center justify-center shrink-0`}
         >
           <span className="material-symbols-outlined text-[20px]">{icon}</span>
         </span>
       </div>
-      <div className="flex flex-col gap-xs mt-auto">
-        <span className={valueClass} data-testid={testId}>
+      <div className="flex flex-col gap-xs mt-auto min-w-0">
+        <span className={`${valueClass} break-words`} data-testid={testId}>
           {value}
         </span>
         {hint ? (
@@ -128,7 +128,7 @@ function MiniMetric({
 }) {
   return (
     <Link
-      className="rounded-xl bg-surface-container-low/70 hover:bg-surface-container-high transition-colors px-md py-md flex items-center gap-md min-h-[4.5rem]"
+      className="rounded-xl bg-surface-container-low/70 hover:bg-surface-container-high transition-colors px-md py-md flex items-center gap-md min-h-[4.5rem] min-w-0"
       href={href}
     >
       <span className="w-10 h-10 rounded-xl bg-surface-container-lowest shadow-sm inline-flex items-center justify-center text-on-surface-variant shrink-0">
@@ -175,7 +175,7 @@ function AlertRow({
       href={href}
     >
       <span className={`material-symbols-outlined text-[20px] ${toneClass}`}>{icon}</span>
-      <span className="flex-1 text-[13px] text-on-surface">{label}</span>
+      <span className="flex-1 min-w-0 text-[13px] text-on-surface">{label}</span>
       <span className={`text-[14px] font-semibold tabular-nums ${toneClass}`}>{value}</span>
     </Link>
   );
@@ -240,7 +240,7 @@ export function AdminDashboardContent() {
 
   if (teacherView) {
     return (
-      <div className="flex flex-col w-full h-full max-w-[1400px] mx-auto gap-lg pb-xl">
+      <div className="flex flex-col w-full h-full max-w-[1400px] mx-auto gap-md sm:gap-lg pb-xl min-w-0">
         {error && (
           <div
             role="alert"
@@ -381,22 +381,21 @@ export function AdminDashboardContent() {
     : [];
 
   return (
-    <div className="flex flex-col w-full h-full max-w-[1400px] mx-auto gap-lg pb-xl" data-testid="admin-dashboard">
-      <div className="ui-table-shell mt-0">
-        <div className="px-lg py-md flex flex-wrap items-center gap-sm">
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-on-surface-variant capitalize">{todayLabel()}</p>
-          </div>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
-            <Link href="/reports" className="ui-btn-secondary gap-sm inline-flex items-center h-10">
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              Exporter
-            </Link>
-            <Link href="/enrollment" className="ui-btn-primary gap-sm inline-flex items-center h-10">
-              <span className="material-symbols-outlined text-[18px]">person_add</span>
-              Nouvelle inscription
-            </Link>
-          </div>
+    <div className="flex flex-col w-full h-full max-w-[1400px] mx-auto gap-md sm:gap-lg pb-xl min-w-0" data-testid="admin-dashboard">
+      <div className="flex flex-wrap items-center gap-sm">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] text-on-surface-variant capitalize">{todayLabel()}</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
+          <Link href="/reports" className="ui-btn-secondary gap-sm inline-flex items-center h-10 px-sm sm:px-md">
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            <span className="hidden sm:inline">Exporter</span>
+          </Link>
+          <Link href="/enrollment" className="ui-btn-primary gap-sm inline-flex items-center h-10 px-sm sm:px-md">
+            <span className="material-symbols-outlined text-[18px]">person_add</span>
+            <span className="sm:hidden">Inscrire</span>
+            <span className="hidden sm:inline">Nouvelle inscription</span>
+          </Link>
         </div>
       </div>
 

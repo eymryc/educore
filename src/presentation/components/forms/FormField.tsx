@@ -1,5 +1,8 @@
 "use client";
 
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
+import { DatePicker } from "@/presentation/components/shared/DatePicker";
+import { Select } from "@/presentation/components/shared/Select";
 import type { CrudField } from "@/shared/types/crud-form.types";
 
 interface FormFieldProps {
@@ -10,7 +13,20 @@ interface FormFieldProps {
 }
 
 const inputClass =
-  "w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm text-on-surface outline-none transition-colors focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
+  "ui-input w-full bg-white border border-outline-variant/25";
+
+function splitDateTime(value: string): { date: string; time: string } {
+  if (!value) return { date: "", time: "" };
+  const [datePart = "", timePart = ""] = value.replace(" ", "T").split("T");
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : "";
+  const time = timePart.slice(0, 5);
+  return { date, time };
+}
+
+function joinDateTime(date: string, time: string): string {
+  if (!date) return "";
+  return `${date}T${time || "00:00"}`;
+}
 
 export function FormField({ field, value, onChange, error }: FormFieldProps) {
   const id = `field-${field.name}`;
@@ -20,12 +36,10 @@ export function FormField({ field, value, onChange, error }: FormFieldProps) {
   if (field.type === "checkbox") {
     return (
       <div className={`flex items-center gap-sm ${spanClass}`}>
-        <input
+        <Checkbox
           checked={Boolean(value)}
-          className="w-4 h-4 rounded text-primary border-outline-variant focus:ring-primary/20"
           id={id}
-          onChange={(e) => onChange(field.name, e.target.checked)}
-          type="checkbox"
+          onChange={(checked) => onChange(field.name, checked)}
         />
         <label className="text-body-sm text-on-surface" htmlFor={id}>
           {field.label}
@@ -53,21 +67,35 @@ export function FormField({ field, value, onChange, error }: FormFieldProps) {
           value={String(value ?? "")}
         />
       ) : field.type === "select" ? (
-        <select
-          aria-invalid={Boolean(error)}
+        <Select
+          ariaLabel={field.label}
           className={`${inputClass} cursor-pointer${invalidClass}`}
           id={id}
-          onChange={(e) => onChange(field.name, e.target.value)}
+          onChange={(v) => onChange(field.name, v)}
+          options={field.options ?? []}
+          placeholder="— Sélectionner —"
+          searchable
+          value={String(value ?? "")}
+        />
+      ) : field.type === "date" ? (
+        <DatePicker
+          ariaLabel={field.label}
+          error={Boolean(error)}
+          id={id}
+          onChange={(v) => onChange(field.name, v)}
           required={field.required}
           value={String(value ?? "")}
-        >
-          <option value="">— Sélectionner —</option>
-          {field.options?.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        />
+      ) : field.type === "datetime-local" ? (
+        <DateTimeField
+          error={Boolean(error)}
+          id={id}
+          invalidClass={invalidClass}
+          label={field.label}
+          onChange={(v) => onChange(field.name, v)}
+          required={field.required}
+          value={String(value ?? "")}
+        />
       ) : (
         <input
           aria-invalid={Boolean(error)}
@@ -88,6 +116,47 @@ export function FormField({ field, value, onChange, error }: FormFieldProps) {
       ) : field.hint ? (
         <p className="mt-xs text-[12px] text-on-surface-variant">{field.hint}</p>
       ) : null}
+    </div>
+  );
+}
+
+function DateTimeField({
+  id,
+  label,
+  value,
+  onChange,
+  required,
+  error,
+  invalidClass,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  error: boolean;
+  invalidClass: string;
+}) {
+  const { date, time } = splitDateTime(value);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_8.5rem] gap-sm">
+      <DatePicker
+        ariaLabel={label}
+        error={error}
+        id={id}
+        onChange={(nextDate) => onChange(joinDateTime(nextDate, time))}
+        required={required}
+        value={date}
+      />
+      <input
+        aria-label={`${label} — heure`}
+        className={`${inputClass}${invalidClass}`}
+        onChange={(e) => onChange(joinDateTime(date, e.target.value))}
+        required={required}
+        type="time"
+        value={time}
+      />
     </div>
   );
 }

@@ -1,7 +1,13 @@
 import type { AcademicPeriod, ClassGroup, NamedRef, Subject } from "@/shared/types/academic.types";
 import type { Student } from "@/shared/types/student.types";
 
-export type AssessmentType = "devoir" | "composition" | "interrogation" | "tp";
+export type AssessmentType =
+  | "devoir"
+  | "composition"
+  | "interrogation"
+  | "tp"
+  | "bepc"
+  | "baccalaureat";
 
 export interface Assessment {
   id: number;
@@ -84,7 +90,15 @@ export const ASSESSMENT_TYPE_LABELS: Record<AssessmentType, string> = {
   composition: "Composition",
   interrogation: "Interrogation",
   tp: "Travaux pratiques",
+  bepc: "BEPC",
+  baccalaureat: "Baccalauréat",
 };
+
+const NATIONAL_EXAM_TYPES: readonly AssessmentType[] = ["bepc", "baccalaureat"];
+
+export function isNationalExamType(type: AssessmentType): boolean {
+  return NATIONAL_EXAM_TYPES.includes(type);
+}
 
 export function toScoreNumber(value: number | string | null | undefined): number {
   const n = Number(value);

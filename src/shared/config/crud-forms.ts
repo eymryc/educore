@@ -25,6 +25,8 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     sections: [
       {
         title: "Identité",
+        description: "État civil de l'élève.",
+        icon: "badge",
         fields: [
           { name: "last_name", label: "Nom", type: "text", required: true, placeholder: "Koné" },
           { name: "first_name", label: "Prénom(s)", type: "text", required: true, placeholder: "Aminata" },
@@ -50,6 +52,8 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
       },
       {
         title: "Scolarité",
+        description: "Classe, niveau et statut d'inscription.",
+        icon: "school",
         fields: [
           {
             name: "level_id",
@@ -81,6 +85,8 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
       },
       {
         title: "Contact",
+        description: "Coordonnées pour joindre l'élève ou le foyer.",
+        icon: "call",
         fields: [
           { name: "email", label: "E-mail", type: "email", placeholder: "eleve@ecole.ci" },
           { name: "phone", label: "Téléphone", type: "tel", placeholder: "+225 07 00 00 00 00" },
@@ -414,6 +420,8 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
               { value: "composition", label: "Composition" },
               { value: "interrogation", label: "Interrogation" },
               { value: "tp", label: "Travaux pratiques" },
+              { value: "bepc", label: "BEPC (examen national)" },
+              { value: "baccalaureat", label: "Baccalauréat (examen national)" },
             ],
           },
           { name: "date", label: "Date", type: "date", required: true },
@@ -643,10 +651,77 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     listPath: "/enrollment",
     sections: [
       {
-        title: "Candidature",
+        title: "Identité",
+        description: "État civil du candidat, comme sur l'extrait d'acte de naissance.",
+        icon: "badge",
         fields: [
           { name: "last_name", label: "Nom", type: "text", required: true },
           { name: "first_name", label: "Prénom(s)", type: "text", required: true },
+          { name: "birth_date", label: "Date de naissance", type: "date" },
+          { name: "birth_place", label: "Lieu de naissance", type: "text", placeholder: "Abidjan" },
+          {
+            name: "gender",
+            label: "Sexe",
+            type: "select",
+            options: [
+              { value: "M", label: "Masculin" },
+              { value: "F", label: "Féminin" },
+            ],
+          },
+          {
+            name: "nationality",
+            label: "Nationalité",
+            type: "text",
+            placeholder: "Ivoirienne",
+          },
+        ],
+      },
+      {
+        title: "Candidature MENA",
+        description:
+          "Provenance officielle (affectation CEPE, orientation BEPC, transfert DELC) et préinscription DESPS.",
+        icon: "how_to_reg",
+        fields: [
+          {
+            name: "origin",
+            label: "Provenance",
+            type: "select",
+            options: [
+              { value: "NOUVELLE_INSCRIPTION", label: "Nouvelle inscription" },
+              { value: "AFFECTATION_CEPE", label: "Affectation 6ème (CEPE)" },
+              { value: "AFFECTATION_BEPC", label: "Orientation 2nde (BEPC)" },
+              { value: "TRANSFERT", label: "Transfert (DELC)" },
+            ],
+          },
+          {
+            name: "national_matricule",
+            label: "Matricule national (DESPS)",
+            type: "text",
+            placeholder: "Ex. 22827650L",
+            hint: "Obligatoire pour l'inscription en ligne MENA si l'élève en a déjà un.",
+          },
+          {
+            name: "previous_school",
+            label: "Établissement d'origine",
+            type: "text",
+            placeholder: "Requis si affectation, orientation ou transfert",
+          },
+          {
+            name: "previous_level",
+            label: "Niveau précédent",
+            type: "text",
+            placeholder: "CM2, 3ème…",
+          },
+          {
+            name: "year_end_decision",
+            label: "Décision de fin d'année",
+            type: "select",
+            options: [
+              { value: "A", label: "Admis(e)" },
+              { value: "R", label: "Redouble" },
+              { value: "E", label: "Exclu(e)" },
+            ],
+          },
           {
             name: "academic_year_id",
             label: "Année scolaire",
@@ -667,17 +742,22 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
             type: "select",
             options: [],
           },
-          { name: "birth_date", label: "Date de naissance", type: "date" },
           {
-            name: "gender",
-            label: "Genre",
-            type: "select",
-            options: [
-              { value: "M", label: "Masculin" },
-              { value: "F", label: "Féminin" },
-            ],
+            name: "mena_receipt_number",
+            label: "N° reçu inscription en ligne",
+            type: "text",
+            hint: "Reçu DESPS / education.gouv.ci à présenter à l'établissement.",
           },
-          { name: "parent_contact", label: "Contact parent", type: "text", required: true },
+          { name: "mena_paid_at", label: "Date du paiement MENA", type: "date" },
+        ],
+      },
+      {
+        title: "Contact du foyer",
+        description: "Parent ou tuteur légal et observations du secrétariat.",
+        icon: "call",
+        fields: [
+          { name: "parent_full_name", label: "Nom du parent / tuteur", type: "text" },
+          { name: "parent_contact", label: "Téléphone du parent", type: "text", required: true },
           { name: "application_date", label: "Date de la demande", type: "date", required: true },
           { name: "observations", label: "Observations", type: "textarea", colSpan: 2 },
         ],
@@ -1685,7 +1765,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "academic-years",
     label: "Années scolaires",
     labelSingular: "année scolaire",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Année",
@@ -1701,7 +1781,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "academic-periods",
     label: "Périodes",
     labelSingular: "période",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Période",
@@ -1734,7 +1814,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "academic-holidays",
     label: "Vacances",
     labelSingular: "période de vacances",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Vacances",
@@ -1757,7 +1837,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "levels",
     label: "Niveaux",
     labelSingular: "niveau",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Niveau",
@@ -1765,6 +1845,15 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
           { name: "name", label: "Nom", type: "text", required: true, placeholder: "6ème" },
           { name: "code", label: "Code", type: "text", placeholder: "6E" },
           { name: "sort_order", label: "Ordre", type: "number" },
+          {
+            name: "cycle",
+            label: "Cycle",
+            type: "select",
+            options: [
+              { value: "college", label: "Collège" },
+              { value: "lycee", label: "Lycée" },
+            ],
+          },
         ],
       },
     ],
@@ -1773,7 +1862,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "series",
     label: "Séries",
     labelSingular: "série",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Série",
@@ -1795,7 +1884,7 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
     key: "class-subjects",
     label: "Matières × classes",
     labelSingular: "affectation matière",
-    listPath: "/academic/structure",
+    listPath: "/settings",
     sections: [
       {
         title: "Affectation",
@@ -1993,6 +2082,17 @@ export const CRUD_RESOURCES: CrudResourceConfig[] = [
             label: "Nouvelle classe",
             type: "select",
             options: [],
+          },
+          {
+            name: "year_end_decision",
+            label: "Décision de fin d'année",
+            type: "select",
+            options: [
+              { value: "A", label: "Admis(e) — passage" },
+              { value: "R", label: "Redouble" },
+              { value: "E", label: "Exclu(e)" },
+            ],
+            hint: "Telle qu'indiquée sur le bulletin du 3e trimestre.",
           },
           { name: "notes", label: "Notes", type: "textarea", colSpan: 2 },
         ],

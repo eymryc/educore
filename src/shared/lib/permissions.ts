@@ -9,6 +9,8 @@ const ADMIN_ROLES = [
   "TEACHER",
   "HEAD_TEACHER",
   "SUPERVISOR",
+  "CENSEUR",
+  "INTENDANT",
   "LIBRARIAN",
   "NURSE",
   "HR_MANAGER",
@@ -53,22 +55,29 @@ export function homePathForUser(user: AuthUser): string {
   return "/dashboard";
 }
 
+export const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super admin",
+  ADMIN: "Administrateur",
+  DIRECTOR: "Proviseur",
+  SECRETARY: "Secrétaire",
+  ACCOUNTANT: "Comptable",
+  TEACHER: "Enseignant",
+  HEAD_TEACHER: "Professeur principal",
+  SUPERVISOR: "Surveillant général",
+  CENSEUR: "Censeur",
+  INTENDANT: "Intendant",
+  STUDENT: "Élève",
+  PARENT: "Parent",
+  LIBRARIAN: "Bibliothécaire",
+  NURSE: "Infirmier",
+  HR_MANAGER: "RH",
+};
+
+export function roleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role;
+}
+
 export function primaryRoleLabel(user: AuthUser | null | undefined): string {
   if (!user?.roles?.length) return "Utilisateur";
-  const labels: Record<string, string> = {
-    SUPER_ADMIN: "Super admin",
-    ADMIN: "Administrateur",
-    DIRECTOR: "Proviseur",
-    SECRETARY: "Secrétaire",
-    ACCOUNTANT: "Comptable",
-    TEACHER: "Enseignant",
-    HEAD_TEACHER: "Professeur principal",
-    SUPERVISOR: "Surveillant",
-    STUDENT: "Élève",
-    PARENT: "Parent",
-    LIBRARIAN: "Bibliothécaire",
-    NURSE: "Infirmier",
-    HR_MANAGER: "RH",
-  };
-  return labels[user.roles[0]] ?? user.roles[0];
+  return roleLabel(user.roles[0] ?? "");
 }

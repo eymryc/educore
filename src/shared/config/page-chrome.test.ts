@@ -8,7 +8,7 @@ describe("resolveAdminPageChrome", () => {
     expect(chrome.breadcrumbs.map((b) => b.label)).toEqual([
       "Accueil",
       "Finances",
-      "Frais",
+      "Grille tarifaire",
     ]);
   });
 
@@ -22,6 +22,12 @@ describe("resolveAdminPageChrome", () => {
   it("resolves CRUD create/edit", () => {
     expect(resolveAdminPageChrome("/crud/teachers/nouveau").title).toContain("Nouveau");
     expect(resolveAdminPageChrome("/crud/teachers/3/modifier").title).toContain("Modifier");
+  });
+
+  it("resolves academic structure CRUD pages under Paramètres", () => {
+    const chrome = resolveAdminPageChrome("/crud/academic-years/nouveau");
+    expect(chrome.title).toContain("Paramètres");
+    expect(chrome.breadcrumbs.some((b) => b.href === "/settings")).toBe(true);
   });
 
   it("resolves dashboard", () => {

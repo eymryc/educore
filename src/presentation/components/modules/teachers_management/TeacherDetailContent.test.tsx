@@ -133,8 +133,10 @@ describe("TeacherDetailContent", () => {
     render(<TeacherDetailContent />);
     await waitFor(() => expect(screen.getByTestId("teacher-assignments-empty")).toBeInTheDocument());
 
-    await user.selectOptions(screen.getByLabelText(/^Classe$/i), "2");
-    await user.selectOptions(screen.getByLabelText(/^Matière$/i), "1");
+    await user.click(screen.getByLabelText(/^Classe$/i));
+    await user.click(await screen.findByRole("option", { name: /2nde A/i }));
+    await user.click(screen.getByLabelText(/^Matière$/i));
+    await user.click(await screen.findByRole("option", { name: /Mathématiques/i }));
     await user.click(screen.getByRole("button", { name: /Ajouter l'affectation/i }));
 
     await waitFor(() => {

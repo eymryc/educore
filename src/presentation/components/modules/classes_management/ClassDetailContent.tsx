@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CrudEditLink } from "@/presentation/components/forms/CrudLinks";
+import { Select } from "@/presentation/components/shared/Select";
 import {
   attachClassGroupStudent,
   detachClassGroupStudent,
@@ -111,7 +112,7 @@ export function ClassDetailContent() {
   }
 
   return (
-    <div className="flex flex-col gap-lg max-w-4xl">
+    <div className="flex flex-col gap-lg w-full max-w-4xl mx-auto">
       <div className="flex items-start justify-between gap-md flex-wrap">
         <div>
           <p className="font-title-sm text-title-sm" data-testid="class-detail-name">
@@ -144,7 +145,7 @@ export function ClassDetailContent() {
       <section className="ui-card ui-card-pad">
         <h2 className="font-headline-md mb-md">Élèves de la classe</h2>
         <p className="font-body-sm text-on-surface-variant mb-md">
-          Affectation via compte portail élève (`user_id`). Effectif :{" "}
+          Affectation via le compte portail de l&apos;élève. Effectif :{" "}
           <span data-testid="class-members-count">{members.length}</span>
           {klass.max_capacity != null ? ` / ${klass.max_capacity}` : ""}
         </p>
@@ -180,20 +181,18 @@ export function ClassDetailContent() {
 
         {canUpdate && (
           <form className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-md" onSubmit={handleAttach}>
-            <select
-              aria-label="Élève à affecter"
+            <Select
+              ariaLabel="Élève à affecter"
               className="bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm"
-              onChange={(e) => setStudentUserId(e.target.value)}
-              required
+              onChange={setStudentUserId}
+              options={available.map((s) => ({
+                value: String(s.user_id),
+                label: `${studentFullName(s)} (${s.matricule})`,
+              }))}
+              placeholder="— Élève avec compte portail —"
+              searchable
               value={studentUserId}
-            >
-              <option value="">— Élève avec compte portail —</option>
-              {available.map((s) => (
-                <option key={s.id} value={String(s.user_id)}>
-                  {studentFullName(s)} ({s.matricule})
-                </option>
-              ))}
-            </select>
+            />
             <button className="ui-btn-primary disabled:opacity-60" disabled={saving || !studentUserId} type="submit">
               Affecter
             </button>

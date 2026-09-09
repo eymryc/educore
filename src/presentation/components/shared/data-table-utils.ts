@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 
 export const DEFAULT_TABLE_PAGE_SIZE = 10;
 
-export function tableRowClass(index: number): string {
-  return `group ui-table-row ${index % 2 === 1 ? "ui-table-row-zebra" : ""}`;
-}
-
-export function tableCheckboxClass(): string {
-  return "size-4 rounded border-outline-variant accent-primary cursor-pointer";
+export function tableRowClass(index: number, selected = false): string {
+  return [
+    "group ui-table-row min-h-[44px] border-b border-outline-variant/10 last:border-b-0",
+    index % 2 === 1 ? "ui-table-row-zebra" : "",
+    selected ? "!bg-secondary-container/35 hover:!bg-secondary-container/50" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function useClientDataTable<T extends { id: number }>(
@@ -68,6 +70,10 @@ export function useClientDataTable<T extends { id: number }>(
     setPageIndex(0);
   }
 
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
   return {
     pageIndex: safePageIndex,
     pageSize,
@@ -82,6 +88,7 @@ export function useClientDataTable<T extends { id: number }>(
     setPageSize: setPageSizeAndReset,
     toggleAllPage,
     toggleOne,
+    clearSelection,
     canPreviousPage: safePageIndex > 0,
     canNextPage: safePageIndex < pageCount - 1,
   };

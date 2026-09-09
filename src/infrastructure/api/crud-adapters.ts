@@ -694,9 +694,19 @@ function enrollmentToForm(row: Enrollment): Record<string, string | boolean> {
     academic_year_id: String(row.academic_year_id ?? ""),
     level_id: String(row.level_id ?? ""),
     class_group_id: row.class_group_id != null ? String(row.class_group_id) : "",
+    origin: row.origin ?? "NOUVELLE_INSCRIPTION",
+    previous_school: row.previous_school ?? "",
+    national_matricule: row.national_matricule ?? "",
     birth_date: row.birth_date ?? "",
+    birth_place: row.birth_place ?? "",
+    nationality: row.nationality ?? "",
+    previous_level: row.previous_level ?? "",
+    year_end_decision: row.year_end_decision ?? "",
+    mena_receipt_number: row.mena_receipt_number ?? "",
+    mena_paid_at: row.mena_paid_at ?? "",
     gender: row.gender ?? "",
     parent_contact: row.parent_contact ?? "",
+    parent_full_name: row.parent_full_name ?? "",
     application_date: row.application_date ?? "",
     observations: row.observations ?? "",
   };
@@ -718,6 +728,20 @@ function enrollmentPayload(
   }
   if (values.observations === "" || values.observations === undefined) {
     payload.observations = null;
+  }
+  for (const key of [
+    "origin",
+    "previous_school",
+    "national_matricule",
+    "birth_place",
+    "nationality",
+    "previous_level",
+    "year_end_decision",
+    "mena_receipt_number",
+    "mena_paid_at",
+    "parent_full_name",
+  ] as const) {
+    if (values[key] === "" || values[key] === undefined) payload[key] = null;
   }
   return payload;
 }
@@ -2693,6 +2717,7 @@ export const CRUD_ADAPTERS: Partial<Record<string, CrudAdapter>> = {
           row.previous_class_group_id != null ? String(row.previous_class_group_id) : "",
         new_class_group_id:
           row.new_class_group_id != null ? String(row.new_class_group_id) : "",
+        year_end_decision: row.year_end_decision ?? "",
         notes: row.notes ?? "",
       };
     },
@@ -2702,6 +2727,9 @@ export const CRUD_ADAPTERS: Partial<Record<string, CrudAdapter>> = {
         academic_year_id: Number(values.academic_year_id),
         notes: values.notes === "" ? null : String(values.notes ?? ""),
       };
+      if (values.year_end_decision) {
+        payload.year_end_decision = String(values.year_end_decision);
+      }
       optionalInt(values, "previous_class_group_id", "create", payload);
       optionalInt(values, "new_class_group_id", "create", payload);
       return createReEnrollment(payload);
@@ -2711,6 +2739,10 @@ export const CRUD_ADAPTERS: Partial<Record<string, CrudAdapter>> = {
         academic_year_id: Number(values.academic_year_id),
         notes: values.notes === "" ? null : String(values.notes ?? ""),
       };
+      payload.year_end_decision =
+        values.year_end_decision === "" || values.year_end_decision === undefined
+          ? null
+          : String(values.year_end_decision);
       optionalInt(values, "previous_class_group_id", "edit", payload);
       optionalInt(values, "new_class_group_id", "edit", payload);
       return updateReEnrollment(id, payload);

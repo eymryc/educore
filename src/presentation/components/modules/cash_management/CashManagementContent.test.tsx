@@ -71,6 +71,19 @@ describe("CashManagementContent", () => {
     });
   });
 
+  it("explains what this space is for", async () => {
+    listCashRegisters.mockResolvedValue([]);
+    listCashTransactions.mockResolvedValue([]);
+
+    render(<CashManagementContent />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cash-intro")).toHaveTextContent(
+        "Suivi de l'argent liquide réellement en caisse"
+      );
+    });
+  });
+
   it("shows error state", async () => {
     listCashRegisters.mockRejectedValue(new Error("Caisse indisponible"));
     listCashTransactions.mockResolvedValue([]);

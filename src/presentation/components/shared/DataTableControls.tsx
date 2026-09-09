@@ -1,6 +1,6 @@
 "use client";
 
-import { tableCheckboxClass } from "@/presentation/components/shared/data-table-utils";
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 
 export function DataTableRefreshButton({
   loading,
@@ -12,7 +12,7 @@ export function DataTableRefreshButton({
   return (
     <button
       aria-label="Actualiser la liste"
-      className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors disabled:opacity-40 shadow-sm"
+      className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors disabled:opacity-40 shadow-sm"
       disabled={loading}
       onClick={onRefresh}
       title="Actualiser"
@@ -37,16 +37,12 @@ export function DataTableSelectHeader({
   onChange: () => void;
 }) {
   return (
-    <th className="py-sm px-md w-10">
-      <input
-        aria-label="Tout sélectionner"
+    <th className="py-[6px] px-md w-10">
+      <Checkbox
+        ariaLabel="Tout sélectionner"
         checked={checked}
-        className={tableCheckboxClass()}
+        indeterminate={indeterminate}
         onChange={onChange}
-        ref={(el) => {
-          if (el) el.indeterminate = indeterminate;
-        }}
-        type="checkbox"
       />
     </th>
   );
@@ -62,14 +58,8 @@ export function DataTableSelectCell({
   onChange: () => void;
 }) {
   return (
-    <td className="py-sm px-md">
-      <input
-        aria-label={`Sélectionner ${label}`}
-        checked={checked}
-        className={tableCheckboxClass()}
-        onChange={onChange}
-        type="checkbox"
-      />
+    <td className="py-[6px] px-md">
+      <Checkbox ariaLabel={`Sélectionner ${label}`} checked={checked} onChange={onChange} />
     </td>
   );
 }

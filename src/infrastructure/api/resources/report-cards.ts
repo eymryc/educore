@@ -1,17 +1,28 @@
 import { api, apiRequest } from "@/infrastructure/api/client";
+import { emptyPaginationMeta } from "@/shared/types/api.types";
 import type {
   ReportCard,
   ReportCardAggregate,
+  ReportCardListResult,
 } from "@/shared/types/report-cards.types";
 
 export type ReportCardListQuery = {
   student_id?: number | string;
   academic_period_id?: number | string;
+  academic_year_id?: number | string;
   class_group_id?: number | string;
+  status?: string;
+  search?: string;
+  page?: number | string;
+  per_page?: number | string;
 };
 
-export function listReportCards(query?: ReportCardListQuery): Promise<ReportCard[]> {
-  return api.get<ReportCard[]>("/report-cards", query);
+export async function listReportCards(query?: ReportCardListQuery): Promise<ReportCardListResult> {
+  const result = await api.getWithMeta<ReportCard[]>("/report-cards", query);
+  return {
+    data: result.data ?? [],
+    meta: result.meta ?? emptyPaginationMeta(),
+  };
 }
 
 export function getReportCard(id: number | string): Promise<ReportCard> {

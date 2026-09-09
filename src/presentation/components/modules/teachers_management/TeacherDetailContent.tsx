@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CrudEditLink } from "@/presentation/components/forms/CrudLinks";
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import { DetailSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import {
@@ -154,7 +155,7 @@ export function TeacherDetailContent() {
   if (!teacher) return null;
 
   return (
-    <div className="flex flex-col gap-lg w-full max-w-5xl">
+    <div className="flex flex-col gap-lg w-full max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-md flex-wrap">
         <div>
           <p className="font-title-sm text-title-sm" data-testid="teacher-detail-name">
@@ -264,41 +265,31 @@ export function TeacherDetailContent() {
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-xs" htmlFor="assign-class">
                     Classe
                   </label>
-                  <select
+                  <Select
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm"
                     disabled={!teacher.user_id}
                     id="assign-class"
-                    onChange={(e) => setClassGroupId(e.target.value)}
-                    required
+                    onChange={setClassGroupId}
+                    options={classGroups.map((c) => ({ value: String(c.id), label: c.name }))}
+                    placeholder="— Sélectionner —"
+                    searchable
                     value={classGroupId}
-                  >
-                    <option value="">— Sélectionner —</option>
-                    {classGroups.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-xs" htmlFor="assign-subject">
                     Matière
                   </label>
-                  <select
+                  <Select
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm"
                     disabled={!teacher.user_id}
                     id="assign-subject"
-                    onChange={(e) => setSubjectId(e.target.value)}
-                    required
+                    onChange={setSubjectId}
+                    options={subjects.map((s) => ({ value: String(s.id), label: s.name }))}
+                    placeholder="— Sélectionner —"
+                    searchable
                     value={subjectId}
-                  >
-                    <option value="">— Sélectionner —</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={String(s.id)}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="sm:col-span-2">
                   <button

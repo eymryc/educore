@@ -20,6 +20,15 @@ export interface PaginationMeta {
   last_page: number;
 }
 
+export interface PaginatedList<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export function emptyPaginationMeta(): PaginationMeta {
+  return { current_page: 1, per_page: 10, total: 0, last_page: 1 };
+}
+
 export interface AuthUser {
   id: number;
   name: string;

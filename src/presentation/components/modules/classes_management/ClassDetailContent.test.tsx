@@ -104,8 +104,9 @@ describe("ClassDetailContent", () => {
     await waitFor(() => expect(screen.getByTestId("class-detail-name")).toHaveTextContent("2nde A"));
     expect(screen.getByTestId("class-members-empty")).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/Élève à affecter/i), "88");
-    await user.click(screen.getByRole("button", { name: /Affecter/i }));
+    await user.click(screen.getByLabelText(/Élève à affecter/i));
+    await user.click(await screen.findByRole("option", { name: /Koné Aminata/i }));
+    await user.click(screen.getByRole("button", { name: /^Affecter$/i }));
 
     await waitFor(() => {
       expect(attachClassGroupStudent).toHaveBeenCalledWith("5", 88);

@@ -14,6 +14,7 @@ const assignEnrollmentClass = vi.fn();
 const rejectEnrollment = vi.fn();
 const uploadEnrollmentDocument = vi.fn();
 const deleteEnrollment = vi.fn();
+const updateEnrollment = vi.fn();
 const listAcademicYears = vi.fn();
 const listLevels = vi.fn();
 const listClassGroups = vi.fn();
@@ -30,6 +31,7 @@ vi.mock("@/infrastructure/api/resources/enrollments", () => ({
   rejectEnrollment: (...args: unknown[]) => rejectEnrollment(...args),
   uploadEnrollmentDocument: (...args: unknown[]) => uploadEnrollmentDocument(...args),
   deleteEnrollment: (...args: unknown[]) => deleteEnrollment(...args),
+  updateEnrollment: (...args: unknown[]) => updateEnrollment(...args),
 }));
 
 vi.mock("@/infrastructure/api/resources/academic", () => ({
@@ -119,18 +121,31 @@ describe("EnrollmentManagementContent", () => {
         room_id: null,
       },
     ]);
-    listEnrollments.mockResolvedValue([]);
+    listEnrollments.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, per_page: 10, total: 0, last_page: 1, status_counts: {} },
+    });
   });
 
   it("shows loading then empty", async () => {
     render(<EnrollmentManagementContent />);
     expect(screen.getByTestId("enrollment-loading")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("enrollment-empty")).toBeInTheDocument());
+    expect(listEnrollments).toHaveBeenCalledWith({ page: 1, per_page: 10 });
   });
 
   it("lists applications and advances to review", async () => {
     const user = userEvent.setup();
-    listEnrollments.mockResolvedValue([baseRow]);
+    listEnrollments.mockResolvedValue({
+      data: [baseRow],
+      meta: {
+        current_page: 1,
+        per_page: 10,
+        total: 1,
+        last_page: 1,
+        status_counts: { APPLICATION: 1 },
+      },
+    });
     reviewEnrollment.mockResolvedValue({ ...baseRow, status: "REVIEW" });
 
     render(<EnrollmentManagementContent />);
@@ -139,14 +154,23 @@ describe("EnrollmentManagementContent", () => {
     expect(screen.getByTestId("enrollment-pipeline")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Actions pour Koné Awa/i }));
-    await user.click(screen.getByRole("menuitem", { name: "Mettre en examen" }));
+    await user.click(screen.getByRole("menuitem", { name: "Examiner le dossier" }));
     await waitFor(() => expect(reviewEnrollment).toHaveBeenCalledWith(11));
-    expect(screen.getByText("Examen")).toBeInTheDocument();
+    expect(screen.getByText("Examen des pièces")).toBeInTheDocument();
   });
 
   it("uploads a document from details panel", async () => {
     const user = userEvent.setup();
-    listEnrollments.mockResolvedValue([baseRow]);
+    listEnrollments.mockResolvedValue({
+      data: [baseRow],
+      meta: {
+        current_page: 1,
+        per_page: 10,
+        total: 1,
+        last_page: 1,
+        status_counts: { APPLICATION: 1 },
+      },
+    });
     uploadEnrollmentDocument.mockResolvedValue({
       id: 9,
       name: "acte",

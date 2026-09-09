@@ -5,6 +5,7 @@ const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiDelete = vi.fn();
 const apiRequest = vi.fn();
+const apiGetWithMeta = vi.fn();
 
 vi.mock("@/infrastructure/api/client", () => ({
   api: {
@@ -12,6 +13,7 @@ vi.mock("@/infrastructure/api/client", () => ({
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     delete: (...args: unknown[]) => apiDelete(...args),
+    getWithMeta: (...args: unknown[]) => apiGetWithMeta(...args),
   },
   apiRequest: (...args: unknown[]) => apiRequest(...args),
 }));
@@ -21,6 +23,7 @@ import {
   deleteStudent,
   getStudentFull,
   listStudents,
+  listStudentsPage,
   updateStudent,
   uploadStudentPhoto,
 } from "@/infrastructure/api/resources/students";
@@ -32,12 +35,30 @@ describe("students API resource", () => {
     apiPut.mockReset();
     apiDelete.mockReset();
     apiRequest.mockReset();
+    apiGetWithMeta.mockReset();
   });
 
   it("lists students", async () => {
     apiGet.mockResolvedValue([{ id: 1 }]);
     await expect(listStudents()).resolves.toEqual([{ id: 1 }]);
     expect(apiGet).toHaveBeenCalledWith("/students");
+  });
+
+  it("lists students as a paginated result", async () => {
+    apiGetWithMeta.mockResolvedValue({
+      data: [{ id: 1 }],
+      meta: { current_page: 1, per_page: 10, total: 1, last_page: 1 },
+    });
+
+    const result = await listStudentsPage({ search: "koné", page: 1, per_page: 10 });
+
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/students", {
+      search: "koné",
+      page: 1,
+      per_page: 10,
+    });
+    expect(result.data).toEqual([{ id: 1 }]);
+    expect(result.meta.total).toBe(1);
   });
 
   it("loads full dossier", async () => {

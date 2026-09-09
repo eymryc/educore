@@ -13,11 +13,20 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 import {
   crudRowActions,
   DataTableActionsMenu,
 } from "@/presentation/components/shared/DataTableActionsMenu";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
 import { DataTableSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
@@ -254,25 +263,19 @@ export function AssignmentsManagementContent() {
         id: "select",
         enableSorting: false,
         header: ({ table }) => (
-          <input
-            aria-label="Tout sélectionner"
+          <Checkbox
+            ariaLabel="Tout sélectionner"
             checked={table.getIsAllPageRowsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            ref={(el) => {
-              if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-            }}
-            type="checkbox"
+            indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
+            onChange={(checked) => table.toggleAllPageRowsSelected(checked)}
           />
         ),
         cell: ({ row }) => (
-          <input
-            aria-label={`Sélectionner ${row.original.title}`}
+          <Checkbox
+            ariaLabel={`Sélectionner ${row.original.title}`}
             checked={row.getIsSelected()}
-            className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
             disabled={!row.getCanSelect()}
-            onChange={row.getToggleSelectedHandler()}
-            type="checkbox"
+            onChange={(checked) => row.toggleSelected(checked)}
           />
         ),
       }),
@@ -420,60 +423,38 @@ export function AssignmentsManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="assignments-admin-list">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher un devoir"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par titre…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par classe"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setClassId(e.target.value)}
+      <DataTableShell testId="assignments-admin-list">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher un devoir"}
+            onChange={setSearch}
+            placeholder={"Rechercher par titre…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par classe"
+            onChange={setClassId}
+            options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Toutes les classes"
             value={classId}
-          >
-            <option value="">Toutes les classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrer par matière"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setSubjectId(e.target.value)}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par matière"
+            onChange={setSubjectId}
+            options={subjects.map((s) => ({ value: String(s.id), label: s.name }))}
+            placeholder="Toutes les matières"
             value={subjectId}
-          >
-            <option value="">Toutes les matières</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={String(s.id)}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrer par statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par statut"
+            onChange={setStatus}
+            options={Object.entries(ASSIGNMENT_STATUS_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {Object.entries(ASSIGNMENT_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          />
           {hasFilters && (
             <button
               className="inline-flex items-center gap-xs h-10 px-md text-[13px] text-on-surface-variant hover:text-primary transition-colors"
@@ -484,7 +465,7 @@ export function AssignmentsManagementContent() {
               Réinitialiser
             </button>
           )}
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <button
               aria-label="Actualiser la liste"
               className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors disabled:opacity-40 shadow-sm"
@@ -503,13 +484,13 @@ export function AssignmentsManagementContent() {
             </button>
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="Nouveau devoir"
                 resource="assignments"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-auto">
           {loading ? (
@@ -656,11 +637,11 @@ export function AssignmentsManagementContent() {
             total={rowCount}
           />
         )}
-      </div>
+      </DataTableShell>
 
       {openAssignment && (
-        <div className="ui-table-shell">
-          <div className="px-lg pt-lg pb-md flex flex-wrap items-center justify-between gap-sm border-b border-outline-variant/15">
+        <DataTableShell>
+          <DataTableToolbar>
             <div>
               <h2 className="font-title-sm text-on-surface">
                 Rendus — {openAssignment.title}
@@ -681,7 +662,7 @@ export function AssignmentsManagementContent() {
               <span className="material-symbols-outlined text-[18px]">close</span>
               Fermer
             </button>
-          </div>
+          </DataTableToolbar>
 
           <div className="p-lg">
             {subsLoading && (
@@ -770,7 +751,7 @@ export function AssignmentsManagementContent() {
                             value={gradeDrafts[s.id]?.score ?? ""}
                           />
                         </label>
-                        <label className="font-body-sm text-on-surface-variant flex-1 min-w-[180px]">
+                        <label className="font-body-sm text-on-surface-variant flex-1 w-full min-w-0 sm:min-w-[180px]">
                           Feedback
                           <input
                             className="ui-input mt-xs block w-full"
@@ -802,7 +783,7 @@ export function AssignmentsManagementContent() {
               </ul>
             )}
           </div>
-        </div>
+        </DataTableShell>
       )}
     </div>
   );

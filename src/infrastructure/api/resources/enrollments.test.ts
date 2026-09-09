@@ -4,6 +4,7 @@ const apiGet = vi.fn();
 const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiDelete = vi.fn();
+const apiGetWithMeta = vi.fn();
 
 vi.mock("@/infrastructure/api/client", () => ({
   api: {
@@ -11,6 +12,7 @@ vi.mock("@/infrastructure/api/client", () => ({
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     delete: (...args: unknown[]) => apiDelete(...args),
+    getWithMeta: (...args: unknown[]) => apiGetWithMeta(...args),
   },
 }));
 
@@ -35,10 +37,14 @@ describe("enrollments API resource", () => {
 
   it("lists, creates and transitions", async () => {
     apiGet.mockResolvedValue([]);
+    apiGetWithMeta.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, per_page: 25, total: 0, last_page: 1 },
+    });
     apiPost.mockResolvedValue({ id: 1, status: "APPLICATION" });
 
     await listEnrollments();
-    expect(apiGet).toHaveBeenCalledWith("/enrollments");
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/enrollments", undefined);
 
     await createEnrollment({ first_name: "Awa", last_name: "Koné" });
     expect(apiPost).toHaveBeenCalledWith(

@@ -1,4 +1,5 @@
 import { api, apiRequest } from "@/infrastructure/api/client";
+import { emptyPaginationMeta } from "@/shared/types/api.types";
 import type {
   CashRegister,
   CashTransaction,
@@ -8,6 +9,7 @@ import type {
   FeeStructure,
   FinanceOverview,
   Invoice,
+  InvoiceListResult,
 } from "@/shared/types/finance.types";
 
 export function getFinanceOverview(): Promise<FinanceOverview> {
@@ -20,11 +22,19 @@ export function listUnpaidInvoices(): Promise<Invoice[]> {
 
 export type InvoiceListQuery = {
   student_id?: number | string;
+  class_group_id?: number | string;
   status?: string;
+  search?: string;
+  page?: number | string;
+  per_page?: number | string;
 };
 
-export function listInvoices(query?: InvoiceListQuery): Promise<Invoice[]> {
-  return api.get<Invoice[]>("/invoices", query);
+export async function listInvoices(query?: InvoiceListQuery): Promise<InvoiceListResult> {
+  const result = await api.getWithMeta<Invoice[]>("/invoices", query);
+  return {
+    data: result.data ?? [],
+    meta: result.meta ?? emptyPaginationMeta(),
+  };
 }
 
 export function getInvoice(id: number | string): Promise<Invoice> {
@@ -33,6 +43,18 @@ export function getInvoice(id: number | string): Promise<Invoice> {
 
 export function createInvoice(payload: Record<string, unknown>): Promise<Invoice> {
   return api.post<Invoice>("/invoices", payload);
+}
+
+/**
+ * Génère les factures d'un élève pour une année scolaire à partir de sa
+ * grille de frais (inscription/réinscription selon son historique + frais
+ * annexes en une facture, scolarité répartie sur les trimestres).
+ */
+export function generateInvoices(payload: {
+  student_id: number | string;
+  academic_year_id: number | string;
+}): Promise<Invoice[]> {
+  return api.post<Invoice[]>("/invoices/generate", payload);
 }
 
 export function updateInvoice(

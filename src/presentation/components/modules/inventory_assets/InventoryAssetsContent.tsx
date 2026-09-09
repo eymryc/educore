@@ -14,6 +14,15 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton, PanelSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -210,7 +219,7 @@ export function InventoryAssetsContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`inventory.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }
@@ -249,37 +258,27 @@ export function InventoryAssetsContent() {
               <label className="ui-stat-label" htmlFor="as-staff">
                 Personnel
               </label>
-              <select
+              <Select
                 className="bg-surface-container-low p-md rounded-lg"
                 id="as-staff"
-                onChange={(e) => setStaffId(e.target.value)}
+                onChange={setStaffId}
+                options={staffOptions.map((o) => ({ value: String(o.id), label: o.label }))}
+                placeholder="—"
                 value={staffId}
-              >
-                <option value="">—</option>
-                {staffOptions.map((o) => (
-                  <option key={o.id} value={String(o.id)}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="flex flex-col gap-xs">
               <label className="ui-stat-label" htmlFor="as-room">
                 Salle
               </label>
-              <select
+              <Select
                 className="bg-surface-container-low p-md rounded-lg"
                 id="as-room"
-                onChange={(e) => setRoomId(e.target.value)}
+                onChange={setRoomId}
+                options={roomOptions.map((o) => ({ value: String(o.id), label: o.label }))}
+                placeholder="—"
                 value={roomId}
-              >
-                <option value="">—</option>
-                {roomOptions.map((o) => (
-                  <option key={o.id} value={String(o.id)}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="flex flex-col gap-xs md:col-span-2">
               <label className="ui-stat-label" htmlFor="as-notes">
@@ -313,45 +312,35 @@ export function InventoryAssetsContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="assets-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Désignation, série, lieu…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+      <DataTableShell testId="assets-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={setSearch}
+            placeholder={"Désignation, série, lieu…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Statut"
+            onChange={setStatus}
+            options={Object.entries(INVENTORY_ASSET_STATUS_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {Object.entries(INVENTORY_ASSET_STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="AJOUTER UNE IMMOBILISATION"
                 resource="assets"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -485,7 +474,7 @@ export function InventoryAssetsContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
 
       {historyId != null && (
         <div className="ui-card p-lg flex flex-col gap-md" data-testid="asset-history">

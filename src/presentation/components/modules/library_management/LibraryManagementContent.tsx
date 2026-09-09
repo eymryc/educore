@@ -18,6 +18,15 @@ import {
   LIBRARY_LOANS_TABLE_SKELETON_COLUMNS,
 } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableShell,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -278,8 +287,8 @@ export function LibraryManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex-1 flex flex-col">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
+      <DataTableShell>
+        <DataTableToolbar>
           <div className="flex flex-wrap gap-xs" data-testid="library-tabs">
             {TABS.map((t) => (
               <button
@@ -299,87 +308,55 @@ export function LibraryManagementContent() {
               </button>
             ))}
           </div>
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder}
-              type="text"
-              value={search}
-            />
-          </div>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={setSearch}
+            placeholder={searchPlaceholder}
+            value={search}
+          />
           {tab === "books" && (
-            <select
-              aria-label="Filtrer par catégorie"
-              className="ui-input cursor-pointer h-10 py-0"
-              onChange={(e) => setCategory(e.target.value)}
+            <DataTableFilterSelect
+              ariaLabel="Filtrer par catégorie"
+              onChange={setCategory}
+              options={categories.map((c) => ({ value: c, label: c }))}
+              placeholder="Toutes catégories"
               value={category}
-            >
-              <option value="">Toutes catégories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            />
           )}
           {tab === "copies" && (
             <>
-              <select
-                aria-label="Filtrer par ouvrage"
-                className="ui-input cursor-pointer h-10 py-0"
-                onChange={(e) => setCopyBookId(e.target.value)}
+              <DataTableFilterSelect
+                ariaLabel="Filtrer par ouvrage"
+                onChange={setCopyBookId}
+                options={books.map((b) => ({ value: String(b.id), label: b.title }))}
+                placeholder="Tous les ouvrages"
                 value={copyBookId}
-              >
-                <option value="">Tous les ouvrages</option>
-                {books.map((b) => (
-                  <option key={b.id} value={String(b.id)}>
-                    {b.title}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Filtrer exemplaires par statut"
-                className="ui-input cursor-pointer h-10 py-0"
-                onChange={(e) => setCopyStatus(e.target.value)}
+              />
+              <DataTableFilterSelect
+                ariaLabel="Filtrer exemplaires par statut"
+                onChange={setCopyStatus}
+                options={(Object.keys(LIBRARY_COPY_STATUS_LABELS) as LibraryCopyStatus[]).map(
+                  (s) => ({ value: s, label: LIBRARY_COPY_STATUS_LABELS[s] })
+                )}
+                placeholder="Tous les statuts"
                 value={copyStatus}
-              >
-                <option value="">Tous les statuts</option>
-                {(Object.keys(LIBRARY_COPY_STATUS_LABELS) as LibraryCopyStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {LIBRARY_COPY_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
+              />
             </>
           )}
           {tab === "loans" && (
             <>
-              <select
-                aria-label="Filtrer emprunts par statut"
-                className="ui-input cursor-pointer h-10 py-0"
+              <DataTableFilterSelect
+                ariaLabel="Filtrer emprunts par statut"
                 disabled={overdueOnly}
-                onChange={(e) => setLoanStatus(e.target.value)}
+                onChange={setLoanStatus}
+                options={(Object.keys(LIBRARY_LOAN_STATUS_LABELS) as LibraryLoanStatus[]).map(
+                  (s) => ({ value: s, label: LIBRARY_LOAN_STATUS_LABELS[s] })
+                )}
+                placeholder="Tous les statuts"
                 value={loanStatus}
-              >
-                <option value="">Tous les statuts</option>
-                {(Object.keys(LIBRARY_LOAN_STATUS_LABELS) as LibraryLoanStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {LIBRARY_LOAN_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
+              />
               <label className="inline-flex items-center gap-sm h-10 px-md text-[13px] text-on-surface-variant cursor-pointer select-none">
-                <input
-                  checked={overdueOnly}
-                  className="size-4 rounded border-outline-variant accent-primary"
-                  onChange={(e) => setOverdueOnly(e.target.checked)}
-                  type="checkbox"
-                />
+                <Checkbox checked={overdueOnly} onChange={setOverdueOnly} />
                 Retards uniquement
               </label>
             </>
@@ -394,17 +371,17 @@ export function LibraryManagementContent() {
               Réinitialiser
             </button>
           )}
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label={createLabel}
                 resource={createResource}
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-auto min-h-[320px]">
           {loading ? (
@@ -741,7 +718,7 @@ export function LibraryManagementContent() {
             total={filteredLoans.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

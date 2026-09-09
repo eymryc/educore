@@ -53,7 +53,7 @@
  */
 @layer components {
   .ui-page-title {
-    @apply font-display-lg text-display-lg text-on-surface;
+    @apply font-display-lg text-display-lg-mobile sm:text-display-lg text-on-surface;
   }
 
   .ui-stat-label {
@@ -65,7 +65,7 @@
   }
 
   .ui-card-pad {
-    @apply p-lg;
+    @apply p-md sm:p-lg;
   }
 
   .ui-card-hover {
@@ -76,12 +76,24 @@
     @apply bg-primary text-on-primary p-lg rounded-xl shadow-md;
   }
 
+  .ui-admin-canvas {
+    @apply bg-white;
+  }
+
+  .ui-table-chrome {
+    @apply px-md py-sm flex items-center gap-sm bg-surface-container;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-height: 52px;
+  }
+
   .ui-table-shell {
-    @apply bg-surface-container-lowest rounded-xl overflow-hidden mt-lg;
+    @apply bg-white rounded-xl overflow-hidden mt-lg max-w-full min-w-0 w-full;
+    border: 1px solid rgb(197 198 205 / 0.4);
     box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.04),
-      0 4px 12px rgb(15 23 42 / 0.06),
-      0 16px 40px rgb(15 23 42 / 0.07);
+      0 2px 4px rgb(15 23 42 / 0.06),
+      0 8px 24px rgb(15 23 42 / 0.1),
+      0 24px 64px rgb(15 23 42 / 0.14);
   }
 
   .ui-table-head {
@@ -125,7 +137,7 @@
   }
 
   .ui-btn-primary {
-    @apply bg-primary text-on-primary font-label-caps text-label-caps px-lg py-sm rounded-full flex items-center transition-colors shadow-md;
+    @apply bg-primary text-on-primary font-label-caps text-label-caps px-md sm:px-lg py-sm rounded-full inline-flex items-center justify-center transition-colors shadow-md;
   }
 
   .ui-btn-primary:hover {
@@ -133,7 +145,7 @@
   }
 
   .ui-btn-secondary {
-    @apply bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps px-lg py-sm rounded-full flex items-center transition-colors shadow-sm;
+    @apply bg-surface-container-high text-on-surface-variant font-label-caps text-label-caps px-md sm:px-lg py-sm rounded-full inline-flex items-center justify-center transition-colors shadow-sm;
   }
 
   .ui-btn-secondary:hover {
@@ -145,11 +157,11 @@
   }
 
   .ui-table-row-zebra {
-    @apply bg-surface-container-low/45;
+    @apply bg-[#f7f9fb];
   }
 
   .ui-table-head-row {
-    @apply bg-surface-container-low/80 border-b border-outline-variant/15 text-label-caps font-label-caps text-on-surface-variant;
+    @apply bg-surface-container-low border-b border-outline-variant/20 text-label-caps font-label-caps text-on-surface-variant;
   }
 
   .ui-skeleton-bar {
@@ -163,6 +175,17 @@
     background-size: 200% 100%;
     animation: ui-skeleton-shimmer 1.4s ease-in-out infinite;
   }
+}
+
+/* Cell padding for every data table — outside @layer so it wins over ad-hoc utilities. */
+.ui-table-shell th,
+.ui-table-shell td {
+  padding: 6px 16px;
+  vertical-align: middle;
+}
+
+.ui-table-shell th {
+  white-space: nowrap;
 }
 
 @keyframes ui-skeleton-shimmer {

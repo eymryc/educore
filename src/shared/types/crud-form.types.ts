@@ -29,6 +29,7 @@ export interface CrudField {
 export interface CrudSection {
   title: string;
   description?: string;
+  icon?: string;
   fields: CrudField[];
 }
 

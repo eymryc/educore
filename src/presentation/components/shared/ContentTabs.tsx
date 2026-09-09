@@ -63,7 +63,7 @@ export function ContentTabs<T extends string>({
 
   return (
     <div
-      className="flex flex-wrap gap-xs px-lg border-b border-outline-variant/20"
+      className="flex flex-nowrap sm:flex-wrap gap-xs px-md sm:px-lg border-b border-outline-variant/20 overflow-x-auto"
       data-testid={testId}
       role="tablist"
     >
@@ -72,7 +72,7 @@ export function ContentTabs<T extends string>({
         return (
           <button
             aria-selected={active}
-            className={`relative inline-flex items-center gap-sm py-md px-md font-title-sm transition-colors ${
+            className={`relative inline-flex items-center gap-sm py-sm sm:py-md px-sm sm:px-md font-title-sm whitespace-nowrap shrink-0 transition-colors ${
               active
                 ? "text-primary"
                 : "text-on-surface-variant hover:text-on-surface"

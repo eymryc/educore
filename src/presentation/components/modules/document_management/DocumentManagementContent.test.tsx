@@ -143,7 +143,8 @@ describe("DocumentManagementContent", () => {
     await user.click(screen.getAllByRole("button", { name: /téléverser/i })[0]!);
     expect(screen.getByTestId("document-upload-form")).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/catégorie document/i), "1");
+    await user.click(screen.getByLabelText(/catégorie document/i));
+    await user.click(await screen.findByRole("option", { name: "RH" }));
     await user.type(screen.getByLabelText(/titre document/i), "Contrat");
     const file = new File(["x"], "contrat.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText(/fichier document/i), {
@@ -158,6 +159,17 @@ describe("DocumentManagementContent", () => {
           title: "Contrat",
           file,
         })
+      );
+    });
+  });
+
+  it("explains what this space is for", async () => {
+    listDocumentCategories.mockResolvedValue([]);
+    listDocuments.mockResolvedValue([]);
+    render(<DocumentManagementContent />);
+    await waitFor(() => {
+      expect(screen.getByTestId("documents-intro")).toHaveTextContent(
+        "Dépôt central des documents officiels de l'établissement"
       );
     });
   });

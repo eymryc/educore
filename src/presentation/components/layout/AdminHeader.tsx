@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { listAcademicYears } from "@/infrastructure/api/resources/academic";
+import { activateAcademicYear, listAcademicYears } from "@/infrastructure/api/resources/academic";
 import { getUnreadNotificationCount } from "@/infrastructure/api/resources/notifications";
 import { useAuth } from "@/infrastructure/auth/AuthProvider";
 import { resolveAdminPageChrome } from "@/shared/config/page-chrome";
-import { primaryRoleLabel } from "@/shared/lib/permissions";
+import { can, primaryRoleLabel } from "@/shared/lib/permissions";
+import { Select } from "@/presentation/components/shared/Select";
 import type { AcademicYear } from "@/shared/types/academic.types";
 
 export function AdminHeader({
@@ -26,7 +27,12 @@ export function AdminHeader({
   const [yearId, setYearId] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activating, setActivating] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const canActivateYear = can(user, "academic.update") || can(user, "institution.update");
+  const selectedYear = years.find((y) => String(y.id) === yearId);
+  const isSelectedYearClosed = selectedYear?.status === "closed";
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +78,23 @@ export function AdminHeader({
     };
   }, [menuOpen]);
 
+  /**
+   * Change réel de l'année scolaire active côté serveur (pas un simple
+   * affichage local) — la plupart des écrans se basent sur `is_active` pour
+   * choisir quoi afficher par défaut, donc on recharge la page pour que tout
+   * reflète immédiatement la nouvelle année active.
+   */
+  async function handleYearChange(newYearId: string) {
+    if (!canActivateYear || newYearId === yearId || activating) return;
+    setActivating(true);
+    try {
+      await activateAcademicYear(newYearId);
+      window.location.reload();
+    } catch {
+      setActivating(false);
+    }
+  }
+
   const initials =
     user?.name
       ?.split(/\s+/)
@@ -87,8 +110,8 @@ export function AdminHeader({
       }`}
     >
       <div aria-hidden className="absolute inset-x-0 top-0 h-[3px]" />
-      <div className="h-full px-md lg:px-lg grid grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] items-center gap-sm">
-        <div className="flex items-center gap-sm min-w-0 justify-self-start">
+      <div className="h-full px-sm sm:px-md lg:px-lg flex items-center gap-sm min-w-0">
+        <div className="flex items-center gap-xs sm:gap-sm min-w-0 flex-1">
           <button
             aria-label="Ouvrir le menu"
             className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-on-primary/80 hover:bg-on-primary/10 hover:text-on-primary transition-colors shrink-0"
@@ -111,7 +134,7 @@ export function AdminHeader({
           </button>
 
           <div
-            className="hidden sm:flex flex-col justify-center min-w-0"
+            className="flex flex-col justify-center min-w-0"
             data-testid="admin-page-chrome"
           >
             <h1 className="text-[15px] lg:text-[16px] font-semibold leading-tight text-on-primary truncate">
@@ -119,7 +142,7 @@ export function AdminHeader({
             </h1>
             <nav
               aria-label="Fil d'Ariane"
-              className="flex items-center gap-1 text-[11px] text-on-primary/65 leading-tight mt-0.5 min-w-0"
+              className="hidden md:flex items-center gap-1 text-[11px] text-on-primary/65 leading-tight mt-0.5 min-w-0"
             >
               {pageChrome.breadcrumbs.map((crumb, index) => {
                 const isLast = index === pageChrome.breadcrumbs.length - 1;
@@ -154,44 +177,54 @@ export function AdminHeader({
 
         <Link
           aria-label="Rechercher des élèves"
-          className="group flex items-center gap-sm h-10 w-full min-w-0 justify-self-center rounded-xl bg-on-primary/10 px-md text-on-primary/70 hover:bg-on-primary/15 hover:text-on-primary transition-colors"
+          className="group inline-flex items-center justify-center md:justify-start gap-sm h-10 w-10 md:w-full md:max-w-md md:flex-1 min-w-0 shrink-0 rounded-xl bg-on-primary/10 text-on-primary/70 hover:bg-on-primary/15 hover:text-on-primary transition-colors md:px-md"
           href="/students"
         >
           <span className="material-symbols-outlined text-[20px] shrink-0">search</span>
-          <span className="text-body-sm truncate">Rechercher des élèves…</span>
-          <kbd className="ml-auto hidden sm:inline-flex items-center rounded-md border border-on-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-on-primary/60 group-hover:border-on-primary/40">
+          <span className="hidden md:inline text-body-sm truncate">Rechercher des élèves…</span>
+          <kbd className="ml-auto hidden lg:inline-flex items-center rounded-md border border-on-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-on-primary/60 group-hover:border-on-primary/40">
             /
           </kbd>
         </Link>
 
-        <div className="flex items-center gap-xs sm:gap-sm shrink-0 justify-self-end">
-          <label className="hidden sm:flex items-center gap-xs h-10 rounded-xl border border-on-primary/20 bg-on-primary/10 px-sm hover:border-on-primary/40 transition-colors">
-            <span className="material-symbols-outlined text-[18px] text-on-primary/70">
-              calendar_month
+        <div className="flex items-center gap-0.5 sm:gap-sm shrink-0">
+          <label className="hidden md:flex items-center gap-xs h-10 rounded-xl border border-on-tertiary-container/30 bg-tertiary-container px-sm hover:border-on-tertiary-container/50 transition-colors">
+            <span className="material-symbols-outlined text-[18px] text-on-tertiary-container">
+              {activating ? "sync" : isSelectedYearClosed ? "lock" : "calendar_month"}
             </span>
-            <select
-              aria-label="Année scolaire"
-              className="bg-transparent border-none text-[13px] font-medium text-on-primary outline-none max-w-[9.5rem] cursor-pointer [&>option]:text-on-surface"
-              data-testid="admin-header-year"
-              onChange={(e) => setYearId(e.target.value)}
-              value={yearId}
-            >
-              {years.length === 0 ? (
-                <option value="">Aucune année</option>
-              ) : (
-                years.map((y) => (
-                  <option key={y.id} value={String(y.id)}>
-                    {y.name}
-                    {y.is_active ? " · active" : ""}
-                  </option>
-                ))
-              )}
-            </select>
+            {canActivateYear ? (
+              <Select
+                ariaLabel="Année scolaire active"
+                className="bg-transparent border-none text-[13px] font-medium text-on-tertiary-container outline-none max-w-[9.5rem] cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                disabled={activating}
+                iconClassName="text-on-tertiary-container/70"
+                onChange={(v) => void handleYearChange(v)}
+                options={years.map((y) => ({
+                  value: String(y.id),
+                  label: `${y.name}${y.is_active ? " · active" : y.status === "closed" ? " · clôturée" : ""}`,
+                }))}
+                placeholder={years.length === 0 ? "Aucune année" : undefined}
+                testId="admin-header-year"
+                value={yearId}
+              />
+            ) : (
+              <span className="text-[13px] font-medium text-on-tertiary-container" data-testid="admin-header-year">
+                {selectedYear?.name ?? "—"}
+              </span>
+            )}
+            {isSelectedYearClosed && (
+              <span
+                className="hidden lg:inline text-[10px] font-semibold uppercase tracking-wide text-on-tertiary-container/70 border-l border-on-tertiary-container/30 pl-xs ml-0.5"
+                data-testid="admin-header-year-readonly"
+              >
+                Lecture seule
+              </span>
+            )}
           </label>
 
           <Link
             aria-label="Communication"
-            className="relative inline-flex items-center justify-center w-10 h-10 rounded-xl text-on-primary/70 hover:bg-on-primary/10 hover:text-on-primary transition-colors"
+            className="hidden sm:inline-flex relative items-center justify-center w-10 h-10 rounded-xl text-on-primary/70 hover:bg-on-primary/10 hover:text-on-primary transition-colors"
             href="/communication"
           >
             <span className="material-symbols-outlined text-[22px]">chat_bubble</span>
@@ -218,7 +251,7 @@ export function AdminHeader({
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Menu compte"
-              className="inline-flex items-center gap-sm h-10 pl-1 pr-2 rounded-xl hover:bg-on-primary/10 transition-colors"
+              className="inline-flex items-center gap-sm h-10 w-10 sm:w-auto justify-center sm:justify-start sm:pl-1 sm:pr-2 rounded-xl hover:bg-on-primary/10 transition-colors"
               onClick={() => setMenuOpen((v) => !v)}
               type="button"
             >
@@ -251,6 +284,38 @@ export function AdminHeader({
                     {user?.email}
                   </div>
                 </div>
+                <div className="px-md py-sm border-b border-outline-variant/15 md:hidden">
+                  <p className="text-[11px] uppercase tracking-wide text-on-surface-variant mb-xs">
+                    Année scolaire
+                  </p>
+                  {canActivateYear ? (
+                    <Select
+                      ariaLabel="Année scolaire active"
+                      className="w-full bg-surface-container-low border border-outline-variant/25 rounded-lg px-sm py-xs text-[13px]"
+                      disabled={activating}
+                      onChange={(v) => void handleYearChange(v)}
+                      options={years.map((y) => ({
+                        value: String(y.id),
+                        label: `${y.name}${y.is_active ? " · active" : y.status === "closed" ? " · clôturée" : ""}`,
+                      }))}
+                      placeholder={years.length === 0 ? "Aucune année" : undefined}
+                      value={yearId}
+                    />
+                  ) : (
+                    <p className="text-[13px] text-on-surface">{selectedYear?.name ?? "—"}</p>
+                  )}
+                </div>
+                <Link
+                  className="flex sm:hidden items-center gap-sm px-md py-sm text-[13px] text-on-surface hover:bg-surface-container-low transition-colors"
+                  href="/communication"
+                  onClick={() => setMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+                    chat_bubble
+                  </span>
+                  Messages
+                </Link>
                 <Link
                   className="flex items-center gap-sm px-md py-sm text-[13px] text-on-surface hover:bg-surface-container-low transition-colors"
                   href="/settings"

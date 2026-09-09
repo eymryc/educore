@@ -7,12 +7,26 @@ const listInvoices = vi.fn();
 const issueInvoice = vi.fn();
 const downloadInvoiceReceipt = vi.fn();
 const deleteInvoice = vi.fn();
+const generateInvoices = vi.fn();
+const listStudents = vi.fn();
+const listAcademicYears = vi.fn();
+const listClassGroups = vi.fn();
 
 vi.mock("@/infrastructure/api/resources/finance", () => ({
   listInvoices: (...args: unknown[]) => listInvoices(...args),
   issueInvoice: (...args: unknown[]) => issueInvoice(...args),
   downloadInvoiceReceipt: (...args: unknown[]) => downloadInvoiceReceipt(...args),
   deleteInvoice: (...args: unknown[]) => deleteInvoice(...args),
+  generateInvoices: (...args: unknown[]) => generateInvoices(...args),
+}));
+
+vi.mock("@/infrastructure/api/resources/students", () => ({
+  listStudents: (...args: unknown[]) => listStudents(...args),
+}));
+
+vi.mock("@/infrastructure/api/resources/academic", () => ({
+  listAcademicYears: (...args: unknown[]) => listAcademicYears(...args),
+  listClassGroups: (...args: unknown[]) => listClassGroups(...args),
 }));
 
 vi.mock("@/infrastructure/auth/AuthProvider", () => ({
@@ -80,16 +94,26 @@ const draftInvoice = {
 vi.mock("@/presentation/components/providers/ConfirmDialogProvider", () => ({
   useConfirm: () => vi.fn().mockResolvedValue(true),
 }));
+
+function paginated<T>(data: T[]) {
+  return { data, meta: { current_page: 1, per_page: 10, total: data.length, last_page: 1 } };
+}
+
 describe("InvoicesManagementContent", () => {
   beforeEach(() => {
     listInvoices.mockReset();
     issueInvoice.mockReset();
     downloadInvoiceReceipt.mockReset();
     deleteInvoice.mockReset();
+    generateInvoices.mockReset();
+    listStudents.mockReset();
+    listAcademicYears.mockReset();
+    listClassGroups.mockReset();
+    listClassGroups.mockResolvedValue([]);
   });
 
   it("lists invoices and issues a draft", async () => {
-    listInvoices.mockResolvedValue([draftInvoice]);
+    listInvoices.mockResolvedValue(paginated([draftInvoice]));
     issueInvoice.mockResolvedValue({ ...draftInvoice, status: "ISSUED" });
 
     render(<InvoicesManagementContent />);
@@ -106,11 +130,102 @@ describe("InvoicesManagementContent", () => {
     });
   });
 
+  it("filters invoices by class", async () => {
+    const user = userEvent.setup();
+    listInvoices.mockResolvedValue(paginated([draftInvoice]));
+    listClassGroups.mockResolvedValue([
+      { id: 2, institution_id: 1, academic_year_id: 1, level_id: 1, series_id: null, name: "6ème A", max_capacity: 40, head_teacher_id: null, room_id: null },
+    ]);
+
+    render(<InvoicesManagementContent />);
+    await waitFor(() => expect(screen.getByTestId("invoices-table")).toBeInTheDocument());
+    await waitFor(() => expect(listClassGroups).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText("Filtrer par classe"));
+    await user.click(await screen.findByRole("option", { name: "6ème A" }));
+
+    await waitFor(() => {
+      expect(listInvoices).toHaveBeenLastCalledWith({
+        class_group_id: "2",
+        page: 1,
+        per_page: 10,
+      });
+    });
+  });
+
+  it("fetches the next page from the server instead of paginating client-side", async () => {
+    const user = userEvent.setup();
+    listInvoices.mockResolvedValue({
+      data: [draftInvoice],
+      meta: { current_page: 1, per_page: 10, total: 15, last_page: 2 },
+    });
+
+    render(<InvoicesManagementContent />);
+    await waitFor(() => expect(screen.getByTestId("invoices-table")).toHaveTextContent("INV-001"));
+
+    await user.click(screen.getByLabelText("Page suivante"));
+
+    await waitFor(() => {
+      expect(listInvoices).toHaveBeenLastCalledWith({ page: 2, per_page: 10 });
+    });
+  });
+
+  it("resets to page 1 and searches server-side when typing in the search box", async () => {
+    const user = userEvent.setup();
+    listInvoices.mockResolvedValue(paginated([draftInvoice]));
+
+    render(<InvoicesManagementContent />);
+    await waitFor(() => expect(screen.getByTestId("invoices-table")).toHaveTextContent("INV-001"));
+
+    await user.type(screen.getByLabelText("Rechercher"), "INV-001");
+
+    await waitFor(() => {
+      expect(listInvoices).toHaveBeenLastCalledWith({
+        search: "INV-001",
+        page: 1,
+        per_page: 10,
+      });
+    });
+  });
+
   it("shows error state", async () => {
     listInvoices.mockRejectedValue(new Error("Factures KO"));
     render(<InvoicesManagementContent />);
     await waitFor(() => {
       expect(screen.getByTestId("invoices-error")).toHaveTextContent("Factures KO");
+    });
+  });
+
+  it("generates invoices for a student and academic year", async () => {
+    listInvoices.mockResolvedValue(paginated([]));
+    listStudents.mockResolvedValue([
+      { ...draftInvoice.student, id: 7, first_name: "Awa", last_name: "Koné", matricule: "EL-007" },
+    ]);
+    listAcademicYears.mockResolvedValue([
+      { id: 1, name: "2026-2027", is_active: true },
+    ]);
+    generateInvoices.mockResolvedValue([draftInvoice, draftInvoice]);
+
+    const user = userEvent.setup();
+    render(<InvoicesManagementContent />);
+    await waitFor(() => expect(screen.getByTestId("invoices-table")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /générer les factures/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("generate-invoices-panel")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Élève"));
+    await user.click(await screen.findByRole("option", { name: /Koné Awa/i }));
+    await user.click(screen.getByLabelText("Année scolaire"));
+    await user.click(await screen.findByRole("option", { name: /2026-2027/i }));
+    await user.click(screen.getByRole("button", { name: "Générer" }));
+
+    await waitFor(() => {
+      expect(generateInvoices).toHaveBeenCalledWith({
+        student_id: "7",
+        academic_year_id: "1",
+      });
     });
   });
 });

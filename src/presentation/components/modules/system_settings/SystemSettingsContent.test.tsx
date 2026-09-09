@@ -13,6 +13,20 @@ const listInstitutionRooms = vi.fn();
 const deleteCampus = vi.fn();
 const deleteBuilding = vi.fn();
 const deleteInstitutionRoom = vi.fn();
+const listAcademicYears = vi.fn();
+const listAcademicPeriods = vi.fn();
+const listAcademicHolidays = vi.fn();
+const listLevels = vi.fn();
+const listSeries = vi.fn();
+const listClassSubjects = vi.fn();
+const listAuditLogs = vi.fn();
+const listUsers = vi.fn();
+const listRoles = vi.fn();
+const listPermissions = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 vi.mock("@/infrastructure/api/resources/grades", () => ({
   getGradingSettings: (...args: unknown[]) => getGradingSettings(...args),
@@ -28,6 +42,38 @@ vi.mock("@/infrastructure/api/resources/institution", () => ({
   deleteCampus: (...args: unknown[]) => deleteCampus(...args),
   deleteBuilding: (...args: unknown[]) => deleteBuilding(...args),
   deleteInstitutionRoom: (...args: unknown[]) => deleteInstitutionRoom(...args),
+}));
+
+vi.mock("@/infrastructure/api/resources/academic", () => ({
+  listAcademicYears: (...args: unknown[]) => listAcademicYears(...args),
+  listAcademicPeriods: (...args: unknown[]) => listAcademicPeriods(...args),
+  listAcademicHolidays: (...args: unknown[]) => listAcademicHolidays(...args),
+  listLevels: (...args: unknown[]) => listLevels(...args),
+  listSeries: (...args: unknown[]) => listSeries(...args),
+  listClassSubjects: (...args: unknown[]) => listClassSubjects(...args),
+  activateAcademicYear: vi.fn(),
+  closeAcademicYear: vi.fn(),
+  deleteAcademicYear: vi.fn(),
+  deleteAcademicPeriod: vi.fn(),
+  deleteAcademicHoliday: vi.fn(),
+  deleteLevel: vi.fn(),
+  deleteSeries: vi.fn(),
+  deleteClassSubject: vi.fn(),
+}));
+
+vi.mock("@/infrastructure/api/resources/audit", () => ({
+  listAuditLogs: (...args: unknown[]) => listAuditLogs(...args),
+  getAuditLog: vi.fn(),
+}));
+
+vi.mock("@/infrastructure/api/resources/identity", () => ({
+  listUsers: (...args: unknown[]) => listUsers(...args),
+  createUser: vi.fn(),
+  updateUser: vi.fn(),
+  deleteUser: vi.fn(),
+  listRoles: (...args: unknown[]) => listRoles(...args),
+  listPermissions: (...args: unknown[]) => listPermissions(...args),
+  updateRolePermissions: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/auth/AuthProvider", () => ({
@@ -76,6 +122,39 @@ describe("SystemSettingsContent", () => {
     deleteCampus.mockReset();
     deleteBuilding.mockReset();
     deleteInstitutionRoom.mockReset();
+    listAcademicYears.mockReset();
+    listAcademicPeriods.mockReset();
+    listAcademicHolidays.mockReset();
+    listLevels.mockReset();
+    listSeries.mockReset();
+    listClassSubjects.mockReset();
+    listAuditLogs.mockReset();
+    listUsers.mockReset();
+    listRoles.mockReset();
+    listPermissions.mockReset();
+
+    listAcademicYears.mockResolvedValue([
+      { id: 1, institution_id: 1, name: "2025-2026", start_date: "2025-09-01", end_date: "2026-07-31", is_active: true },
+    ]);
+    listAcademicPeriods.mockResolvedValue([]);
+    listAcademicHolidays.mockResolvedValue([]);
+    listLevels.mockResolvedValue([]);
+    listSeries.mockResolvedValue([]);
+    listClassSubjects.mockResolvedValue([]);
+    listAuditLogs.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, last_page: 1, per_page: 25, total: 0 },
+    });
+    listUsers.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, last_page: 1, per_page: 10, total: 0 },
+    });
+    listRoles.mockResolvedValue([
+      { id: 1, name: "TEACHER", permissions: ["students.view"] },
+    ]);
+    listPermissions.mockResolvedValue([
+      { name: "students.view", domain: "students", action: "view" },
+    ]);
 
     getInstitution.mockResolvedValue({
       id: 1,
@@ -180,8 +259,8 @@ describe("SystemSettingsContent", () => {
     expect(listInstitutionRooms).toHaveBeenCalled();
 
     expect(screen.getByText("Campus Nord")).toBeInTheDocument();
-    expect(screen.getByText(/Bloc A/)).toBeInTheDocument();
-    expect(screen.getByText(/Salle 101/)).toBeInTheDocument();
+    expect(screen.getByText(/Bloc A \(A\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Salle 101 \(101\)/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /NOUVEAU CAMPUS/i })).toHaveAttribute(
       "href",
       "/crud/campuses/nouveau"
@@ -210,5 +289,37 @@ describe("SystemSettingsContent", () => {
         })
       );
     });
+  });
+
+  it("hosts the academic structure screen as a settings tab", async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsContent />);
+
+    await user.click(screen.getByRole("button", { name: /Année académique/i }));
+    await waitFor(() => expect(listAcademicYears).toHaveBeenCalled());
+    expect(await screen.findByTestId("academic-years-table")).toBeInTheDocument();
+    expect(screen.getByText(/2025-2026/)).toBeInTheDocument();
+  });
+
+  it("hosts the security audit log as a settings tab", async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsContent />);
+
+    await user.click(screen.getByRole("button", { name: /Journal d'audit/i }));
+    await waitFor(() => expect(listAuditLogs).toHaveBeenCalled());
+    expect(await screen.findByTestId("audit-table")).toBeInTheDocument();
+  });
+
+  it("hosts users and roles as settings tabs", async () => {
+    const user = userEvent.setup();
+    render(<SystemSettingsContent />);
+
+    await user.click(screen.getByRole("button", { name: /Utilisateurs/i }));
+    await waitFor(() => expect(listUsers).toHaveBeenCalled());
+    expect(await screen.findByTestId("users-table")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Rôles & permissions/i }));
+    await waitFor(() => expect(listRoles).toHaveBeenCalled());
+    expect(await screen.findByTestId("roles-panel")).toBeInTheDocument();
   });
 });

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CrudEditLink } from "@/presentation/components/forms/CrudLinks";
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import { DetailSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import {
@@ -139,7 +141,7 @@ export function ParentDetailContent() {
   if (!guardian) return null;
 
   return (
-    <div className="flex flex-col gap-lg w-full max-w-5xl">
+    <div className="flex flex-col gap-lg w-full max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-md flex-wrap">
         <div>
           <p className="font-title-sm text-title-sm" data-testid="parent-detail-name">
@@ -245,48 +247,37 @@ export function ParentDetailContent() {
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-xs" htmlFor="attach-student">
                     Élève
                   </label>
-                  <select
+                  <Select
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm"
                     id="attach-student"
-                    onChange={(e) => setStudentId(e.target.value)}
-                    required
+                    onChange={setStudentId}
+                    options={availableStudents.map((s) => ({
+                      value: String(s.id),
+                      label: `${studentFullName(s)} (${s.matricule})`,
+                    }))}
+                    placeholder="— Sélectionner —"
+                    searchable
                     value={studentId}
-                  >
-                    <option value="">— Sélectionner —</option>
-                    {availableStudents.map((s) => (
-                      <option key={s.id} value={String(s.id)}>
-                        {studentFullName(s)} ({s.matricule})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-xs" htmlFor="attach-rel">
                     Lien de parenté
                   </label>
-                  <select
+                  <Select
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-md py-sm text-body-sm"
                     id="attach-rel"
-                    onChange={(e) => setRelationship(e.target.value as GuardianRelationship)}
-                    value={relationship}
-                  >
-                    {(Object.keys(GUARDIAN_RELATIONSHIP_LABELS) as GuardianRelationship[]).map(
-                      (key) => (
-                        <option key={key} value={key}>
-                          {GUARDIAN_RELATIONSHIP_LABELS[key]}
-                        </option>
-                      )
+                    onChange={(v) => setRelationship(v as GuardianRelationship)}
+                    options={(Object.keys(GUARDIAN_RELATIONSHIP_LABELS) as GuardianRelationship[]).map(
+                      (key) => ({ value: key, label: GUARDIAN_RELATIONSHIP_LABELS[key] })
                     )}
-                  </select>
+                    searchable
+                    value={relationship}
+                  />
                 </div>
                 <div className="flex items-end">
                   <label className="inline-flex items-center gap-sm text-body-sm">
-                    <input
-                      checked={isPrimary}
-                      className="w-4 h-4 rounded text-primary"
-                      onChange={(e) => setIsPrimary(e.target.checked)}
-                      type="checkbox"
-                    />
+                    <Checkbox checked={isPrimary} onChange={setIsPrimary} />
                     Contact principal
                   </label>
                 </div>

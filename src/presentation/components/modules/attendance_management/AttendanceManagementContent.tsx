@@ -8,6 +8,13 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { DataTableSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableToolbar,
+  DataTableShell,
+  DataTableFilterSelect,
+  DataTableFilterDate,
+} from "@/presentation/components/shared/DataTable";
+
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -417,35 +424,27 @@ export function AttendanceManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex-1 min-w-0" data-testid="attendance-table">
-        <div className="px-lg pt-md pb-md flex flex-wrap items-center gap-sm bg-surface-container-low/80">
-          <select
-            aria-label="Filtrer par classe"
-            className="ui-input bg-surface-container-lowest cursor-pointer h-10 py-0"
-            onChange={(e) => setClassId(e.target.value)}
+      <DataTableShell className="min-w-0" testId="attendance-table">
+        <DataTableToolbar>
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par classe"
+            onChange={setClassId}
+            options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
             value={classId}
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            aria-label="Date de présence"
-            className="ui-input bg-surface-container-lowest h-10 py-0"
-            onChange={(e) => setDate(e.target.value)}
-            type="date"
+          />
+          <DataTableFilterDate
+            ariaLabel="Date de présence"
+            onChange={setDate}
             value={date}
           />
           <input
             aria-label="Rechercher un élève"
-            className="ui-input bg-surface-container-lowest flex-1 min-w-[200px] h-10 py-0"
+            className="ui-input w-full sm:flex-1 min-w-0 sm:min-w-[180px] h-9 py-0 bg-white border border-outline-variant/25"
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher un élève…"
             value={search}
           />
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <button
@@ -459,7 +458,7 @@ export function AttendanceManagementContent() {
               </button>
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -471,7 +470,7 @@ export function AttendanceManagementContent() {
           ) : rows.length === 0 ? (
             <p className="p-lg font-body-sm text-on-surface-variant" data-testid="attendance-empty">
               {classStudents.length === 0
-                ? "Aucun élève affecté à cette classe (`class_group_id` sur la fiche élève)."
+                ? "Aucun élève affecté à cette classe. Affectez des élèves depuis leur fiche."
                 : "Aucun élève ne correspond à ce filtre."}
             </p>
           ) : (
@@ -612,7 +611,7 @@ export function AttendanceManagementContent() {
             total={rows.length}
           />
         )}
-      </div>
+      </DataTableShell>
       </div>
     </div>
   );

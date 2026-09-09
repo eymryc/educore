@@ -1,3 +1,4 @@
+import type { PaginatedList } from "@/shared/types/api.types";
 import type { Student } from "@/shared/types/student.types";
 
 export type GuardianRelationship = "pere" | "mere" | "tuteur" | "autre";
@@ -26,6 +27,7 @@ export interface StudentGuardianLink {
   relationship: GuardianRelationship;
   is_primary: boolean;
   student?: Student | null;
+  guardian?: Guardian | null;
 }
 
 export const GUARDIAN_RELATIONSHIP_LABELS: Record<GuardianRelationship, string> = {
@@ -40,6 +42,8 @@ export function guardianFullName(
 ): string {
   return `${guardian.last_name} ${guardian.first_name}`.trim();
 }
+
+export type GuardianListResult = PaginatedList<Guardian>;
 
 export function filterGuardians(
   guardians: Guardian[],

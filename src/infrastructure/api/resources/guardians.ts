@@ -1,13 +1,30 @@
 import { api } from "@/infrastructure/api/client";
+import { emptyPaginationMeta } from "@/shared/types/api.types";
 import type {
   Guardian,
+  GuardianListResult,
   GuardianRelationship,
   StudentGuardianLink,
 } from "@/shared/types/guardian.types";
 import type { Student } from "@/shared/types/student.types";
 
+export type GuardianListQuery = {
+  search?: string;
+  portal?: "with" | "without";
+  page?: number | string;
+  per_page?: number | string;
+};
+
 export function listGuardians(): Promise<Guardian[]> {
   return api.get<Guardian[]>("/guardians");
+}
+
+export async function listGuardiansPage(query: GuardianListQuery): Promise<GuardianListResult> {
+  const result = await api.getWithMeta<Guardian[]>("/guardians", query);
+  return {
+    data: result.data ?? [],
+    meta: result.meta ?? emptyPaginationMeta(),
+  };
 }
 
 export function getGuardian(id: number | string): Promise<Guardian> {

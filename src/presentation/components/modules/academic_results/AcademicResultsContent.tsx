@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchStudentDashboard } from "@/infrastructure/api/resources/dashboard";
+import { fetchParentDashboard, fetchStudentDashboard } from "@/infrastructure/api/resources/dashboard";
 import { listGrades } from "@/infrastructure/api/resources/grades";
 import { getAuthErrorMessage, useAuth } from "@/infrastructure/auth/AuthProvider";
 import { isParentUser, isStudentUser } from "@/shared/lib/permissions";
+import type { ParentChildSummary } from "@/shared/types/dashboard.types";
 import type { Grade } from "@/shared/types/grades.types";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
+import { Select } from "@/presentation/components/shared/Select";
 
 function scoreLabel(score: number | string | null | undefined): string {
   if (score == null || score === "") return "—";
@@ -18,13 +20,41 @@ export function AcademicResultsContent() {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [children, setChildren] = useState<ParentChildSummary[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState("");
 
   const isStudent = isStudentUser(user);
   const isParent = isParentUser(user);
 
   useEffect(() => {
+    if (!isParent) return;
+    let cancelled = false;
+    async function loadChildren() {
+      try {
+        const dash = await fetchParentDashboard();
+        if (cancelled) return;
+        setChildren(dash.children);
+        if (dash.children.length > 0) {
+          setSelectedChildId((prev) => prev || String(dash.children[0]!.id));
+        }
+      } catch (err) {
+        if (!cancelled) setError(getAuthErrorMessage(err));
+      }
+    }
+    void loadChildren();
+    return () => {
+      cancelled = true;
+    };
+  }, [isParent]);
+
+  useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (isParent && !selectedChildId) {
+        setGrades([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
@@ -39,8 +69,16 @@ export function AcademicResultsContent() {
             return;
           }
           rows = await listGrades({ student_id: dash.student_id });
+        } else if (isParent) {
+          rows = await listGrades({ student_id: selectedChildId });
         } else {
-          rows = await listGrades();
+          // Portail élève/parent uniquement : un autre rôle (ex. admin en
+          // prévisualisation) n'a pas de "mes notes" à afficher — ne surtout
+          // pas appeler /grades sans filtre (des dizaines de milliers de
+          // lignes toutes années confondues, déjà observé en épuisement
+          // mémoire côté API).
+          if (!cancelled) setGrades([]);
+          return;
         }
         if (!cancelled) setGrades(rows);
       } catch (err) {
@@ -53,7 +91,7 @@ export function AcademicResultsContent() {
     return () => {
       cancelled = true;
     };
-  }, [isStudent]);
+  }, [isStudent, isParent, selectedChildId]);
 
   const average = useMemo(() => {
     if (grades.length === 0) return null;
@@ -67,10 +105,20 @@ export function AcademicResultsContent() {
         <h1 className="ui-page-title">Notes & résultats</h1>
         <p className="font-body-md text-on-surface-variant mt-sm">
           {isParent
-            ? "Notes de vos enfants (validées et en cours)."
+            ? "Notes de l'enfant sélectionné (validées et en cours)."
             : "Vos notes enregistrées."}
         </p>
       </div>
+
+      {isParent && children.length > 0 && (
+        <Select
+          ariaLabel="Enfant"
+          className="ui-input h-11 w-full sm:w-auto"
+          onChange={setSelectedChildId}
+          options={children.map((c) => ({ value: String(c.id), label: c.full_name }))}
+          value={selectedChildId}
+        />
+      )}
 
       {error && (
         <div role="alert" className="rounded-lg bg-error-container text-on-error-container px-md py-sm font-body-sm">
@@ -106,9 +154,6 @@ export function AcademicResultsContent() {
                     </div>
                     <div className="font-body-sm text-on-surface-variant mt-xs">
                       {g.assessment?.subject?.name ?? "Matière"}
-                      {isParent && g.student
-                        ? ` · ${g.student.first_name} ${g.student.last_name}`
-                        : ""}
                     </div>
                     {g.comment && (
                       <p className="font-body-sm text-on-surface-variant mt-xs">{g.comment}</p>

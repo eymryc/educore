@@ -1,8 +1,11 @@
-import type { AcademicPeriod } from "@/shared/types/academic.types";
+import type { AcademicPeriod, AcademicYear } from "@/shared/types/academic.types";
+import type { PaginatedList } from "@/shared/types/api.types";
 import type { Student } from "@/shared/types/student.types";
 import { studentFullName } from "@/shared/types/student.types";
 
 export type ReportCardStatus = "draft" | "generated" | "published";
+
+export type ReportCardMention = "tres_bien" | "bien" | "assez_bien" | "passable";
 
 export interface ReportCardBulletinMedia {
   id: number;
@@ -14,8 +17,12 @@ export interface ReportCard {
   id: number;
   institution_id: number;
   student_id: number;
-  academic_period_id: number;
+  /** Bulletin trimestriel : renseigné. Bulletin de synthèse annuelle : null (voir academic_year_id). */
+  academic_period_id: number | null;
+  /** Renseigné uniquement pour un bulletin de synthèse annuelle. */
+  academic_year_id?: number | null;
   appreciation: string | null;
+  mention?: ReportCardMention | null;
   status: ReportCardStatus;
   generated_at: string | null;
   published_at: string | null;
@@ -23,12 +30,17 @@ export interface ReportCard {
   created_by: number | null;
   student?: Student | null;
   academic_period?: AcademicPeriod | null;
+  academic_year?: AcademicYear | null;
   bulletin?: ReportCardBulletinMedia | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
 
+export type ReportCardListResult = PaginatedList<ReportCard>;
+
 export interface ReportCardAggregate {
+  /** true pour une synthèse annuelle (moyenne annuelle + MO) plutôt qu'un trimestre. */
+  is_annual?: boolean;
   institution?: { name?: string };
   student?: {
     id: number;
@@ -45,13 +57,25 @@ export interface ReportCardAggregate {
     end_date?: string | null;
     academic_year?: string | null;
   };
+  /** Présent uniquement quand is_annual est true. */
+  academic_year?: { id: number; name?: string };
+  /** Détail par trimestre — présent uniquement quand is_annual est true. */
+  periods?: Array<{ id: number; name?: string; general_average: number | string | null }>;
   subjects?: Array<{
     subject_id: number;
     subject_name: string;
     coefficient: number | string;
-    average: number | string | null;
+    average?: number | string | null;
+    /** Nom utilisé à la place de `average` quand is_annual est true. */
+    annual_average?: number | string | null;
   }>;
   general_average?: number | string | null;
+  /** Présent uniquement quand is_annual est true. */
+  annual_average?: number | string | null;
+  /** Moyenne d'Orientation (BEPC) — présent uniquement quand is_annual est true et qu'une note de BEPC existe. */
+  orientation_average?: number | string | null;
+  mention?: ReportCardMention | null;
+  mention_label?: string | null;
   class_rank?: number | null;
   class_size?: number | null;
   passing_score?: number | string | null;
@@ -69,6 +93,13 @@ export const REPORT_CARD_STATUS_LABELS: Record<ReportCardStatus, string> = {
   draft: "Brouillon",
   generated: "Généré",
   published: "Publié",
+};
+
+export const REPORT_CARD_MENTION_LABELS: Record<ReportCardMention, string> = {
+  tres_bien: "Très Bien",
+  bien: "Bien",
+  assez_bien: "Assez Bien",
+  passable: "Passable",
 };
 
 export function canGenerateReportCard(status: ReportCardStatus): boolean {

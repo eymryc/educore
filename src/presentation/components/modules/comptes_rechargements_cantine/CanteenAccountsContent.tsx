@@ -14,6 +14,16 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { DatePicker } from "@/presentation/components/shared/DatePicker";
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -147,7 +157,7 @@ export function CanteenAccountsContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`canteen.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }
@@ -192,11 +202,9 @@ export function CanteenAccountsContent() {
               <label className="ui-stat-label" htmlFor="topup-date">
                 Date
               </label>
-              <input
-                className="bg-surface-container-low p-md rounded-lg"
+              <DatePicker
                 id="topup-date"
-                onChange={(e) => setPaidAt(e.target.value)}
-                type="date"
+                onChange={setPaidAt}
                 value={paidAt}
               />
             </div>
@@ -204,17 +212,17 @@ export function CanteenAccountsContent() {
               <label className="ui-stat-label" htmlFor="topup-method">
                 Mode
               </label>
-              <select
-                className="bg-surface-container-low p-md rounded-lg"
+              <Select
+                className="ui-input w-full bg-white border border-outline-variant/25 cursor-pointer"
                 id="topup-method"
-                onChange={(e) =>
-                  setPaymentMethod(e.target.value as CanteenPaymentMethod)
-                }
+                onChange={(v) => setPaymentMethod(v as CanteenPaymentMethod)}
+                options={[
+                  { value: "especes", label: "Espèces" },
+                  { value: "mobile", label: "Mobile Money" },
+                ]}
+                searchable
                 value={paymentMethod}
-              >
-                <option value="especes">Espèces</option>
-                <option value="mobile">Mobile Money</option>
-              </select>
+              />
             </div>
             <div className="flex flex-col gap-xs md:col-span-2">
               <label className="ui-stat-label" htmlFor="topup-notes">
@@ -248,45 +256,35 @@ export function CanteenAccountsContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="canteen-accounts-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom élève…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+      <DataTableShell testId="canteen-accounts-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={setSearch}
+            placeholder={"Nom élève…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Statut"
+            onChange={setStatus}
+            options={Object.entries(CANTEEN_ACCOUNT_STATUS_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {Object.entries(CANTEEN_ACCOUNT_STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="NOUVEAU COMPTE"
                 resource="canteen-accounts"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -390,7 +388,7 @@ export function CanteenAccountsContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

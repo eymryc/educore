@@ -36,7 +36,7 @@ export function AdminLayoutShell({ children }: AdminLayoutShellProps) {
   }
 
   return (
-    <div className="bg-surface font-body-md text-on-surface min-h-screen">
+    <div className="bg-white font-body-md text-on-surface min-h-screen">
       <Suspense fallback={null}>
         <NavigationProgressBar />
       </Suspense>
@@ -56,8 +56,8 @@ export function AdminLayoutShell({ children }: AdminLayoutShellProps) {
           onToggleSidebar={toggleCollapse}
           sidebarCollapsed={collapsed}
         />
-        <main className="relative pt-20 bg-surface min-h-screen">
-          <div className="px-lg py-lg">{children}</div>
+        <main className="relative pt-20 ui-admin-canvas min-h-screen min-w-0 overflow-x-clip">
+          <div className="max-w-[1400px] mx-auto px-sm sm:px-md lg:px-lg py-md sm:py-lg min-w-0">{children}</div>
         </main>
       </div>
     </div>

@@ -84,6 +84,8 @@ describe("finance helpers", () => {
         provider: "paystack",
         provider_reference: "ref-abc",
         provider_transaction_id: null,
+        receipt_number: null,
+        method: "PAYSTACK",
         refund_amount: null,
         paid_at: null,
         failed_at: null,

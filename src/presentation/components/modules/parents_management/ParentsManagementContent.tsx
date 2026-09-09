@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
 import {
   crudRowActions,
@@ -17,25 +17,33 @@ import {
   DataTableSkeleton,
   PARENTS_TABLE_SKELETON_COLUMNS,
 } from "@/presentation/components/shared/DataTableSkeleton";
+import {
+  DATA_TABLE_CREATE_CLASS,
+  DataTableSearch,
+  DataTableShell,
+  DataTableToolbar,
+  DataTableToolbarActions,
+} from "@/presentation/components/shared/DataTable";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
 import {
+  DEFAULT_TABLE_PAGE_SIZE,
   tableRowClass,
-  useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
-import { deleteGuardian, listGuardians } from "@/infrastructure/api/resources/guardians";
+import { deleteGuardian, listGuardiansPage } from "@/infrastructure/api/resources/guardians";
+import { emptyPaginationMeta, type PaginationMeta } from "@/shared/types/api.types";
 import { useAuth, getAuthErrorMessage } from "@/infrastructure/auth/AuthProvider";
 import { can } from "@/shared/lib/permissions";
-import {
-  filterGuardians,
-  guardianFullName,
-  type Guardian,
-} from "@/shared/types/guardian.types";
+import { guardianFullName, type Guardian } from "@/shared/types/guardian.types";
 import { useConfirm } from "@/presentation/components/providers/ConfirmDialogProvider";
 
 export function ParentsManagementContent() {
   const confirmDialog = useConfirm();
   const { user } = useAuth();
   const [guardians, setGuardians] = useState<Guardian[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_TABLE_PAGE_SIZE);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -50,7 +58,14 @@ export function ParentsManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      setGuardians(await listGuardians());
+      const result = await listGuardiansPage({
+        ...(search ? { search } : {}),
+        ...(portal !== "all" ? { portal } : {}),
+        page,
+        per_page: perPage,
+      });
+      setGuardians(result.data);
+      setMeta(result.meta);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -60,30 +75,40 @@ export function ParentsManagementContent() {
 
   useEffect(() => {
     void reload();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search/portal/page/perPage drive API filters
+  }, [search, portal, page, perPage]);
 
-  const filtered = useMemo(
-    () => filterGuardians(guardians, { search, portal }),
-    [guardians, search, portal]
-  );
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, portal, page, perPage]);
 
-  const {
-    pageIndex,
-    pageSize,
-    pageCount,
-    pageRows,
-    from,
-    to,
-    selectedIds,
-    allPageSelected,
-    somePageSelected,
-    setPageIndex,
-    setPageSize,
-    toggleAllPage,
-    toggleOne,
-    canPreviousPage,
-    canNextPage,
-  } = useClientDataTable(filtered, [search, portal]);
+  const allPageSelected =
+    guardians.length > 0 && guardians.every((g) => selectedIds.has(g.id));
+  const somePageSelected = guardians.some((g) => selectedIds.has(g.id));
+
+  function toggleAllPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        guardians.forEach((g) => next.delete(g.id));
+      } else {
+        guardians.forEach((g) => next.add(g.id));
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const from = meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1;
+  const to = Math.min(meta.current_page * meta.per_page, meta.total);
 
   async function handleDelete(guardian: Guardian) {
     if (!canDelete) return;
@@ -91,7 +116,11 @@ export function ParentsManagementContent() {
     setDeletingId(guardian.id);
     try {
       await deleteGuardian(guardian.id);
-      setGuardians((prev) => prev.filter((g) => g.id !== guardian.id));
+      if (guardians.length <= 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await reload();
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -110,21 +139,17 @@ export function ParentsManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell flex flex-col">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher un parent"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom, e-mail ou téléphone…"
-              type="text"
-              value={search}
-            />
-          </div>
+      <DataTableShell>
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel="Rechercher un parent"
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
+            placeholder="Rechercher par nom, e-mail ou téléphone…"
+            value={search}
+          />
           <div className="flex items-center gap-xs bg-surface-container rounded-lg p-xs">
             {(
               [
@@ -140,24 +165,27 @@ export function ParentsManagementContent() {
                     ? "bg-surface-container-lowest text-on-surface shadow-sm"
                     : "text-on-surface-variant hover:text-on-surface"
                 }`}
-                onClick={() => setPortal(value)}
+                onClick={() => {
+                  setPortal(value);
+                  setPage(1);
+                }}
                 type="button"
               >
                 {label}
               </button>
             ))}
           </div>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <DataTableToolbarActions>
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="AJOUTER UN PARENT"
                 resource="parents"
               />
             )}
-          </div>
-        </div>
+          </DataTableToolbarActions>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -168,7 +196,7 @@ export function ParentsManagementContent() {
               rows={10}
               testId="parents-loading"
             />
-          ) : filtered.length === 0 ? (
+          ) : meta.total === 0 ? (
             <div
               className="flex flex-col items-center justify-center p-2xl text-center"
               data-testid="parents-empty"
@@ -201,7 +229,7 @@ export function ParentsManagementContent() {
                 </tr>
               </thead>
               <tbody className="font-body-sm text-body-sm text-on-surface">
-                {pageRows.map((guardian, index) => (
+                {guardians.map((guardian, index) => (
                   <tr className={tableRowClass(index)} key={guardian.id}>
                     <DataTableSelectCell
                       checked={selectedIds.has(guardian.id)}
@@ -264,32 +292,30 @@ export function ParentsManagementContent() {
           )}
         </div>
 
-        {!loading && filtered.length > 0 && (
+        {!loading && meta.total > 0 && (
           <DataTablePagination
-            canNextPage={canNextPage}
-            canPreviousPage={canPreviousPage}
+            canNextPage={meta.current_page < meta.last_page}
+            canPreviousPage={meta.current_page > 1}
             entityLabel="parents"
-            filteredHint={
-              filtered.length !== guardians.length
-                ? `filtre sur ${guardians.length}`
-                : undefined
-            }
             from={from}
-            onFirstPage={() => setPageIndex(0)}
-            onLastPage={() => setPageIndex(pageCount - 1)}
-            onNextPage={() => setPageIndex(pageIndex + 1)}
-            onPageChange={setPageIndex}
-            onPageSizeChange={setPageSize}
-            onPreviousPage={() => setPageIndex(pageIndex - 1)}
-            pageCount={pageCount}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
+            onFirstPage={() => setPage(1)}
+            onLastPage={() => setPage(meta.last_page)}
+            onNextPage={() => setPage((p) => p + 1)}
+            onPageChange={(index) => setPage(index + 1)}
+            onPageSizeChange={(size) => {
+              setPerPage(size);
+              setPage(1);
+            }}
+            onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+            pageCount={meta.last_page}
+            pageIndex={meta.current_page - 1}
+            pageSize={perPage}
             testId="parents-pagination"
             to={to}
-            total={filtered.length}
+            total={meta.total}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

@@ -1,4 +1,6 @@
-import type { PaginationMeta } from "@/shared/types/api.types";
+import { emptyPaginationMeta, type PaginationMeta } from "@/shared/types/api.types";
+
+export { emptyPaginationMeta };
 
 export interface AuditLogUser {
   id: number;
@@ -67,6 +69,3 @@ export function prettyJson(value: unknown): string {
   }
 }
 
-export function emptyPaginationMeta(): PaginationMeta {
-  return { current_page: 1, per_page: 10, total: 0, last_page: 1 };
-}

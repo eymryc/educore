@@ -5,6 +5,7 @@ const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiDelete = vi.fn();
 const apiRequest = vi.fn();
+const apiGetWithMeta = vi.fn();
 
 vi.mock("@/infrastructure/api/client", () => ({
   api: {
@@ -12,6 +13,7 @@ vi.mock("@/infrastructure/api/client", () => ({
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     delete: (...args: unknown[]) => apiDelete(...args),
+    getWithMeta: (...args: unknown[]) => apiGetWithMeta(...args),
   },
   apiRequest: (...args: unknown[]) => apiRequest(...args),
 }));
@@ -24,6 +26,7 @@ import {
   getFinanceOverview,
   issueInvoice,
   listCashTransactions,
+  listInvoices,
   listUnpaidInvoices,
 } from "@/infrastructure/api/resources/finance";
 import {
@@ -39,6 +42,20 @@ describe("finance API resources", () => {
     apiPut.mockReset();
     apiDelete.mockReset();
     apiRequest.mockReset();
+    apiGetWithMeta.mockReset();
+  });
+
+  it("lists invoices as a paginated result", async () => {
+    apiGetWithMeta.mockResolvedValue({
+      data: [{ id: 1 }],
+      meta: { current_page: 1, per_page: 25, total: 1, last_page: 1 },
+    });
+
+    const result = await listInvoices({ status: "ISSUED", page: 1 });
+
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/invoices", { status: "ISSUED", page: 1 });
+    expect(result.data).toEqual([{ id: 1 }]);
+    expect(result.meta.total).toBe(1);
   });
 
   it("loads overview and unpaid invoices", async () => {
@@ -113,11 +130,14 @@ describe("finance API resources", () => {
   });
 
   it("initiates payment and refunds without a client confirm endpoint", async () => {
-    apiGet.mockResolvedValue([]);
+    apiGetWithMeta.mockResolvedValue({
+      data: [],
+      meta: { current_page: 1, per_page: 25, total: 0, last_page: 1 },
+    });
     apiPost.mockResolvedValue({ id: 9, status: "PROCESSING" });
 
     await listPayments({ invoice_id: 3 });
-    expect(apiGet).toHaveBeenCalledWith("/payments", { invoice_id: 3 });
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/payments", { invoice_id: 3 });
 
     await initiatePayment({ invoice_id: 3, amount: 5000 });
     expect(apiPost).toHaveBeenCalledWith("/payments", {

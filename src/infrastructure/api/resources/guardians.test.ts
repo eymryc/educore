@@ -4,6 +4,7 @@ const apiGet = vi.fn();
 const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiDelete = vi.fn();
+const apiGetWithMeta = vi.fn();
 
 vi.mock("@/infrastructure/api/client", () => ({
   api: {
@@ -11,6 +12,7 @@ vi.mock("@/infrastructure/api/client", () => ({
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     delete: (...args: unknown[]) => apiDelete(...args),
+    getWithMeta: (...args: unknown[]) => apiGetWithMeta(...args),
   },
 }));
 
@@ -21,6 +23,7 @@ import {
   detachGuardianStudent,
   listGuardianStudents,
   listGuardians,
+  listGuardiansPage,
 } from "@/infrastructure/api/resources/guardians";
 
 describe("guardians API resource", () => {
@@ -29,6 +32,7 @@ describe("guardians API resource", () => {
     apiPost.mockReset();
     apiPut.mockReset();
     apiDelete.mockReset();
+    apiGetWithMeta.mockReset();
   });
 
   it("lists guardians and linked students", async () => {
@@ -37,6 +41,23 @@ describe("guardians API resource", () => {
     expect(apiGet).toHaveBeenCalledWith("/guardians");
     await listGuardianStudents(1);
     expect(apiGet).toHaveBeenCalledWith("/guardians/1/students");
+  });
+
+  it("lists guardians as a paginated result", async () => {
+    apiGetWithMeta.mockResolvedValue({
+      data: [{ id: 1 }],
+      meta: { current_page: 1, per_page: 10, total: 1, last_page: 1 },
+    });
+
+    const result = await listGuardiansPage({ portal: "with", page: 1, per_page: 10 });
+
+    expect(apiGetWithMeta).toHaveBeenCalledWith("/guardians", {
+      portal: "with",
+      page: 1,
+      per_page: 10,
+    });
+    expect(result.data).toEqual([{ id: 1 }]);
+    expect(result.meta.total).toBe(1);
   });
 
   it("creates and deletes a guardian", async () => {

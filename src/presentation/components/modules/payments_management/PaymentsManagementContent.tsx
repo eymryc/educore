@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CrudCreateLink } from "@/presentation/components/forms/CrudLinks";
 import {
   DataTableRefreshButton,
@@ -9,24 +9,39 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
+  DEFAULT_TABLE_PAGE_SIZE,
   tableRowClass,
-  useClientDataTable,
 } from "@/presentation/components/shared/data-table-utils";
+import { listUnpaidInvoices } from "@/infrastructure/api/resources/finance";
 import {
+  downloadPaymentReceipt,
   getPayment,
   listPayments,
+  recordManualPayment,
   refundPayment,
 } from "@/infrastructure/api/resources/payments";
 import { useAuth, getAuthErrorMessage } from "@/infrastructure/auth/AuthProvider";
 import { can } from "@/shared/lib/permissions";
+import { emptyPaginationMeta, type PaginationMeta } from "@/shared/types/api.types";
 import {
+  PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
   canOpenPaystackCheckout,
-  filterPayments,
   formatMoneyFcfa,
+  type Invoice,
   type Payment,
+  type PaymentMethod,
   type PaymentStatus,
 } from "@/shared/types/finance.types";
 import { studentFullName } from "@/shared/types/student.types";
@@ -46,12 +61,25 @@ export function PaymentsManagementContent() {
   const confirmDialog = useConfirm();
   const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_TABLE_PAGE_SIZE);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [successCount, setSuccessCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [unpaidInvoices, setUnpaidInvoices] = useState<Invoice[]>([]);
+  const [manualInvoiceId, setManualInvoiceId] = useState("");
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualMethod, setManualMethod] = useState<PaymentMethod | "">("");
+  const [manualReference, setManualReference] = useState("");
+  const [recording, setRecording] = useState(false);
 
   const canCreate = can(user, "payments.create");
   const canRefund = can(user, "payments.refund");
@@ -60,7 +88,20 @@ export function PaymentsManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      setPayments(await listPayments());
+      const [result, successResult] = await Promise.all([
+        listPayments({
+          ...(status ? { status } : {}),
+          ...(search ? { search } : {}),
+          page,
+          per_page: perPage,
+        }),
+        // Compte global (pas la page courante) via une requête légère
+        // (1 ligne demandée) qui ne lit que `meta.total`.
+        listPayments({ status: "SUCCESS", per_page: 1 }),
+      ]);
+      setPayments(result.data);
+      setMeta(result.meta);
+      setSuccessCount(successResult.meta.total);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -70,38 +111,40 @@ export function PaymentsManagementContent() {
 
   useEffect(() => {
     void reload();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search/status/page/perPage drive API filters
+  }, [search, status, page, perPage]);
 
-  const filtered = useMemo(
-    () => filterPayments(payments, { search, status }),
-    [payments, search, status]
-  );
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, status, page, perPage]);
 
-  const successTotal = useMemo(
-    () =>
-      payments
-        .filter((p) => p.status === "SUCCESS")
-        .reduce((sum, p) => sum + Number(p.amount || 0), 0),
-    [payments]
-  );
+  const allPageSelected =
+    payments.length > 0 && payments.every((p) => selectedIds.has(p.id));
+  const somePageSelected = payments.some((p) => selectedIds.has(p.id));
 
-  const {
-    pageIndex,
-    pageSize,
-    pageCount,
-    pageRows,
-    from,
-    to,
-    selectedIds,
-    allPageSelected,
-    somePageSelected,
-    setPageIndex,
-    setPageSize,
-    toggleAllPage,
-    toggleOne,
-    canPreviousPage,
-    canNextPage,
-  } = useClientDataTable(filtered, [search, status]);
+  function toggleAllPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        payments.forEach((p) => next.delete(p.id));
+      } else {
+        payments.forEach((p) => next.add(p.id));
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const from = meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1;
+  const to = Math.min(meta.current_page * meta.per_page, meta.total);
 
   async function handleRefresh(payment: Payment) {
     setBusy(true);
@@ -115,6 +158,52 @@ export function PaymentsManagementContent() {
       setError(getAuthErrorMessage(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openManualForm() {
+    setShowManualForm(true);
+    setNotice(null);
+    setError(null);
+    try {
+      setUnpaidInvoices(await listUnpaidInvoices());
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    }
+  }
+
+  async function handleRecordManualPayment() {
+    if (!manualInvoiceId || !manualAmount || !manualMethod) return;
+    setRecording(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const payment = await recordManualPayment({
+        invoice_id: manualInvoiceId,
+        amount: Number(manualAmount),
+        method: manualMethod,
+        reference: manualReference || undefined,
+      });
+      await reload();
+      setNotice(`Paiement enregistré — reçu ${payment.receipt_number ?? ""}.`);
+      setShowManualForm(false);
+      setManualInvoiceId("");
+      setManualAmount("");
+      setManualMethod("");
+      setManualReference("");
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setRecording(false);
+    }
+  }
+
+  async function handleDownloadReceipt(payment: Payment) {
+    setError(null);
+    try {
+      await downloadPaymentReceipt(payment.id);
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
     }
   }
 
@@ -143,7 +232,7 @@ export function PaymentsManagementContent() {
       >
         <span className="font-label-caps text-on-surface-variant uppercase">Encaissements réussis</span>
 <p className="font-body-sm text-on-surface-variant mt-xs">
-          {payments.filter((p) => p.status === "SUCCESS").length} paiement(s) SUCCESS
+          {successCount} paiement(s) SUCCESS
         </p>
       </div>
 
@@ -162,45 +251,125 @@ export function PaymentsManagementContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="payments-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher élève, référence…"
-              type="text"
-              value={search}
-            />
-          </div>
-          <select
-            aria-label="Filtrer par statut"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setStatus(e.target.value)}
+      <DataTableShell testId="payments-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
+            placeholder={"Rechercher élève, référence…"}
+            value={search}
+          />
+          <DataTableFilterSelect
+            ariaLabel="Filtrer par statut"
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={(Object.keys(PAYMENT_STATUS_LABELS) as PaymentStatus[]).map((s) => ({
+              value: s,
+              label: PAYMENT_STATUS_LABELS[s],
+            }))}
+            placeholder="Tous les statuts"
             value={status}
-          >
-            <option value="">Tous les statuts</option>
-            {(Object.keys(PAYMENT_STATUS_LABELS) as PaymentStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {PAYMENT_STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          />
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
+              <button
+                className="inline-flex items-center gap-sm h-10 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                onClick={() => void openManualForm()}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[18px]">payments</span>
+                Enregistrer un paiement
+              </button>
+            )}
+            {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="INITIER UN PAIEMENT"
                 resource="payments"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
+
+        {showManualForm && (
+          <div
+            className="px-lg py-md flex flex-wrap items-end gap-sm bg-surface-container-low/80 border-b border-outline-variant/15"
+            data-testid="manual-payment-panel"
+          >
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[240px]">
+              <span className="ui-stat-label">Facture</span>
+              <Select
+                ariaLabel="Facture"
+                className="ui-input h-10 py-0"
+                onChange={setManualInvoiceId}
+                options={unpaidInvoices.map((inv) => ({
+                  value: String(inv.id),
+                  label: `${inv.invoice_number ?? `#${inv.id}`} — ${inv.student ? studentFullName(inv.student) : `Élève #${inv.student_id}`} (solde ${formatMoneyFcfa(inv.balance_due)})`,
+                }))}
+                placeholder="Sélectionner…"
+                searchable
+                value={manualInvoiceId}
+              />
+            </label>
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[140px]">
+              <span className="ui-stat-label">Montant (FCFA)</span>
+              <input
+                aria-label="Montant du paiement"
+                className="ui-input h-10 py-0"
+                min={1}
+                onChange={(e) => setManualAmount(e.target.value)}
+                type="number"
+                value={manualAmount}
+              />
+            </label>
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[180px]">
+              <span className="ui-stat-label">Mode de paiement</span>
+              <Select
+                ariaLabel="Mode de paiement"
+                className="ui-input h-10 py-0"
+                onChange={(v) => setManualMethod(v as PaymentMethod)}
+                options={(["CASH", "MOBILE_MONEY", "CHEQUE", "BANK_TRANSFER"] as PaymentMethod[]).map(
+                  (m) => ({ value: m, label: PAYMENT_METHOD_LABELS[m] })
+                )}
+                placeholder="Sélectionner…"
+                searchable
+                value={manualMethod}
+              />
+            </label>
+            <label className="flex flex-col gap-xs font-body-sm w-full sm:w-auto min-w-0 sm:min-w-[200px]">
+              <span className="ui-stat-label">Référence (optionnel)</span>
+              <input
+                aria-label="Référence du paiement"
+                className="ui-input h-10 py-0"
+                onChange={(e) => setManualReference(e.target.value)}
+                placeholder="N° chèque, transaction…"
+                type="text"
+                value={manualReference}
+              />
+            </label>
+            <button
+              className="inline-flex items-center gap-sm h-9 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm disabled:opacity-50"
+              disabled={recording || !manualInvoiceId || !manualAmount || !manualMethod}
+              onClick={() => void handleRecordManualPayment()}
+              type="button"
+            >
+              {recording ? "Enregistrement…" : "Enregistrer"}
+            </button>
+            <button
+              className="inline-flex items-center gap-sm h-10 bg-surface-container-high text-on-surface font-label-caps text-label-caps px-md rounded-lg transition-colors"
+              onClick={() => setShowManualForm(false)}
+              type="button"
+            >
+              Annuler
+            </button>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -222,14 +391,14 @@ export function PaymentsManagementContent() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {payments.length === 0 ? (
                   <tr>
                     <td className="py-lg px-lg text-on-surface-variant" colSpan={6}>
                       Aucun paiement.
                     </td>
                   </tr>
                 ) : (
-                  pageRows.map((p, index) => (
+                  payments.map((p, index) => (
                     <tr className={tableRowClass(index)} key={p.id}>
                       <DataTableSelectCell
                         checked={selectedIds.has(p.id)}
@@ -269,6 +438,15 @@ export function PaymentsManagementContent() {
                               Ouvrir Paystack
                             </a>
                           )}
+                          {p.status === "SUCCESS" && p.receipt_number && (
+                            <button
+                              className="px-sm py-xs rounded bg-surface-container-high text-[11px] font-label-caps"
+                              onClick={() => void handleDownloadReceipt(p)}
+                              type="button"
+                            >
+                              Reçu {p.receipt_number}
+                            </button>
+                          )}
                           <button
                             className="px-sm py-xs rounded bg-surface-container-high text-[11px] font-label-caps disabled:opacity-40"
                             disabled={busy}
@@ -297,26 +475,29 @@ export function PaymentsManagementContent() {
           )}
         </div>
 
-        {!loading && filtered.length > 0 && (
+        {!loading && meta.total > 0 && (
           <DataTablePagination
-            canNextPage={canNextPage}
-            canPreviousPage={canPreviousPage}
+            canNextPage={meta.current_page < meta.last_page}
+            canPreviousPage={meta.current_page > 1}
             entityLabel="paiements"
             from={from}
-            onFirstPage={() => setPageIndex(0)}
-            onLastPage={() => setPageIndex(pageCount - 1)}
-            onNextPage={() => setPageIndex(pageIndex + 1)}
-            onPageChange={setPageIndex}
-            onPageSizeChange={setPageSize}
-            onPreviousPage={() => setPageIndex(pageIndex - 1)}
-            pageCount={pageCount}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
+            onFirstPage={() => setPage(1)}
+            onLastPage={() => setPage(meta.last_page)}
+            onNextPage={() => setPage((p) => p + 1)}
+            onPageChange={(index) => setPage(index + 1)}
+            onPageSizeChange={(size) => {
+              setPerPage(size);
+              setPage(1);
+            }}
+            onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+            pageCount={meta.last_page}
+            pageIndex={meta.current_page - 1}
+            pageSize={perPage}
             to={to}
-            total={filtered.length}
+            total={meta.total}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

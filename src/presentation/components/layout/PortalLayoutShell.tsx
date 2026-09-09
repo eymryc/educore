@@ -53,7 +53,7 @@ export function PortalBottomNav({ variant = "student" }: PortalBottomNavProps) {
 
   return (
     <nav className="fixed bottom-0 w-full z-50 bg-surface/80 backdrop-blur-xl pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
-      <div className="flex justify-between items-center h-16 px-sm">
+      <div className="flex justify-between items-center min-h-16 px-xs py-xs">
         {items.map((item) => {
           const active = isPortalNavActive(pathname, item.href, items);
           return (
@@ -63,12 +63,15 @@ export function PortalBottomNav({ variant = "student" }: PortalBottomNavProps) {
               aria-current={active ? "page" : undefined}
               className={
                 active
-                  ? "flex flex-col items-center justify-center flex-1 gap-xs transition-colors text-on-tertiary-container"
-                  : "flex flex-col items-center justify-center flex-1 gap-xs text-on-surface-variant transition-colors"
+                  ? "flex flex-col items-center justify-center flex-1 min-w-0 gap-0.5 transition-colors text-on-tertiary-container"
+                  : "flex flex-col items-center justify-center flex-1 min-w-0 gap-0.5 text-on-surface-variant transition-colors"
               }
+              title={item.label}
             >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="font-label-caps text-[10px] uppercase">{item.label}</span>
+              <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+              <span className="font-label-caps text-[9px] sm:text-[10px] uppercase leading-tight text-center line-clamp-2 max-w-full px-0.5">
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -94,7 +97,7 @@ export function PortalLayoutShell({
         <NavigationProgressBar />
       </Suspense>
       <PortalHeader title={title} variant={variant} />
-      <main className="relative w-full pt-16 pb-20 bg-background">{children}</main>
+      <main className="relative w-full min-w-0 overflow-x-clip pt-16 pb-24 bg-background">{children}</main>
       <PortalBottomNav variant={variant} />
     </div>
   );

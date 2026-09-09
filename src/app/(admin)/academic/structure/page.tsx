@@ -1,9 +1,5 @@
-import { AcademicStructureContent } from "@/presentation/components/modules/academic_structure/AcademicStructureContent";
-
-export const metadata = {
-  title: "Structure académique | EduCore",
-};
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AcademicStructureContent />;
+  redirect("/settings?tab=academic");
 }

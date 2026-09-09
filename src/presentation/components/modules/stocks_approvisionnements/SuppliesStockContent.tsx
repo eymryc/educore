@@ -14,6 +14,16 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableSearch,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
+import { DatePicker } from "@/presentation/components/shared/DatePicker";
+import { Select } from "@/presentation/components/shared/Select";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -153,7 +163,7 @@ export function SuppliesStockContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`inventory.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }
@@ -182,20 +192,17 @@ export function SuppliesStockContent() {
               <label className="ui-stat-label" htmlFor="mv-type">
                 Type
               </label>
-              <select
-                className="bg-surface-container-low p-md rounded-lg"
+              <Select
+                className="ui-input w-full bg-white border border-outline-variant/25 cursor-pointer"
                 id="mv-type"
-                onChange={(e) =>
-                  setMovementType(e.target.value as InventoryMovementType)
-                }
+                onChange={(v) => setMovementType(v as InventoryMovementType)}
+                options={Object.entries(INVENTORY_MOVEMENT_TYPE_LABELS).map(([k, v]) => ({
+                  value: k,
+                  label: v,
+                }))}
+                searchable
                 value={movementType}
-              >
-                {Object.entries(INVENTORY_MOVEMENT_TYPE_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="flex flex-col gap-xs">
               <label className="ui-stat-label" htmlFor="mv-qty">
@@ -214,11 +221,9 @@ export function SuppliesStockContent() {
               <label className="ui-stat-label" htmlFor="mv-date">
                 Date
               </label>
-              <input
-                className="bg-surface-container-low p-md rounded-lg"
+              <DatePicker
                 id="mv-date"
-                onChange={(e) => setMovementDate(e.target.value)}
-                type="date"
+                onChange={setMovementDate}
                 value={movementDate}
               />
             </div>
@@ -265,40 +270,29 @@ export function SuppliesStockContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="supplies-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <div className="ui-search-field flex-1 min-w-[200px] h-10 py-0">
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              aria-label="Rechercher"
-              className="ui-search-input ml-sm h-full"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Désignation, catégorie…"
-              type="text"
-              value={search}
-            />
-          </div>
+      <DataTableShell testId="supplies-table">
+        <DataTableToolbar>
+          <DataTableSearch
+            ariaLabel={"Rechercher"}
+            onChange={setSearch}
+            placeholder={"Désignation, catégorie…"}
+            value={search}
+          />
           <label className="flex items-center gap-sm font-body-sm h-10">
-            <input
-              checked={lowOnly}
-              onChange={(e) => setLowOnly(e.target.checked)}
-              type="checkbox"
-            />
+            <Checkbox checked={lowOnly} onChange={setLowOnly} />
             Stock bas seulement
           </label>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="AJOUTER UN ARTICLE"
                 resource="supplies"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto min-h-[320px]">
           {loading ? (
@@ -418,7 +412,7 @@ export function SuppliesStockContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }

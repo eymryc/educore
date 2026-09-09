@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { SystemSettingsContent } from "@/presentation/components/modules/system_settings/SystemSettingsContent";
 
 export const metadata = {
@@ -5,5 +7,11 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <SystemSettingsContent />;
+  return (
+    <Suspense
+      fallback={<ContentSkeleton label="Chargement…" testId="settings-loading" variant="table" />}
+    >
+      <SystemSettingsContent />
+    </Suspense>
+  );
 }

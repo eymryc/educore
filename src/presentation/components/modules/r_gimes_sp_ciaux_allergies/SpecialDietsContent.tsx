@@ -14,6 +14,14 @@ import {
 } from "@/presentation/components/shared/DataTableControls";
 import { ContentSkeleton } from "@/presentation/components/shared/DataTableSkeleton";
 import { DataTablePagination } from "@/presentation/components/shared/DataTablePagination";
+import {
+  DataTableShell,
+  DataTableToolbar,
+  DataTableFilterSelect,
+  DATA_TABLE_CREATE_CLASS,
+} from "@/presentation/components/shared/DataTable";
+
+import { Checkbox } from "@/presentation/components/shared/Checkbox";
 import { StatusBadge } from "@/presentation/components/shared/StatusBadge";
 import {
   tableRowClass,
@@ -108,7 +116,7 @@ export function SpecialDietsContent() {
   if (!canView) {
     return (
       <p className="p-xl font-body-md text-on-surface-variant">
-        Accès réservé (`canteen.view`).
+        Accès réservé — vous n&apos;avez pas la permission nécessaire pour consulter cette page.
       </p>
     );
   }
@@ -124,41 +132,33 @@ export function SpecialDietsContent() {
         </div>
       )}
 
-      <div className="ui-table-shell" data-testid="special-diets-table">
-        <div className="px-lg pt-lg pb-md flex flex-wrap items-center gap-sm border-b border-outline-variant/15">
-          <select
-            aria-label="Type de régime"
-            className="ui-input cursor-pointer h-10 py-0"
-            onChange={(e) => setDietType(e.target.value)}
+      <DataTableShell testId="special-diets-table">
+        <DataTableToolbar>
+          <DataTableFilterSelect
+            ariaLabel="Type de régime"
+            onChange={setDietType}
+            options={Object.entries(CANTEEN_DIET_TYPE_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+            placeholder="Tous les types"
             value={dietType}
-          >
-            <option value="">Tous les types</option>
-            {Object.entries(CANTEEN_DIET_TYPE_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
+          />
           <label className="flex items-center gap-sm font-body-sm h-10">
-            <input
-              checked={activeOnly}
-              className="size-4 rounded border-outline-variant accent-primary cursor-pointer"
-              onChange={(e) => setActiveOnly(e.target.checked)}
-              type="checkbox"
-            />
+            <Checkbox checked={activeOnly} onChange={setActiveOnly} />
             Actifs seulement
           </label>
-          <div className="ml-auto shrink-0 flex items-center gap-sm">
+          <div className="flex flex-wrap items-center justify-end gap-sm w-full sm:w-auto sm:ml-auto">
             <DataTableRefreshButton loading={loading} onRefresh={() => void reload()} />
             {canCreate && (
               <CrudCreateLink
-                className="inline-flex items-center gap-sm h-10 bg-primary hover:bg-primary/90 text-on-primary font-label-caps text-label-caps px-md rounded-lg transition-colors shadow-sm"
+                className={DATA_TABLE_CREATE_CLASS}
                 label="NOUVEAU RÉGIME"
                 resource="special-diets"
               />
             )}
           </div>
-        </div>
+        </DataTableToolbar>
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -251,7 +251,7 @@ export function SpecialDietsContent() {
             total={filtered.length}
           />
         )}
-      </div>
+      </DataTableShell>
     </div>
   );
 }
